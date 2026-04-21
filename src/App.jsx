@@ -1,52 +1,44 @@
 import { useState } from 'react';
 import './App.css';
-
-// Import các Component từ file khác
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import TiepNhanDieuPhoi from './pages/TiepNhanDieuPhoi';
-
-const MainContent = ({ activeMenu }) => {
-  const renderContent = () => {
-    switch (activeMenu) {
-      case 'dashboard':
-        return <Dashboard />;
-      case 'tiep-nhan':
-        return <TiepNhanDieuPhoi />;
-      case 'don-vi':
-        return <div className="card-tam"><h3>Danh sách Đơn vị phối hợp</h3></div>;
-      case 'bao-cao':
-        return <div className="card-tam"><h3>Xuất báo cáo tự động</h3></div>;
-      case 'tuyen-truyen':
-        return <div className="card-tam"><h3>Quản lý Bài viết Tuyên truyền</h3></div>;
-      default:
-        return <p>Đang tải...</p>;
-    }
-  };
-
-  return (
-    <div className="main-content">
-      <header className="top-header">
-        <h1>Hệ thống Tiếp nhận Phản ánh và Tuyên truyền</h1>
-        <div className="header-right">
-          <span className="notification" title="Thông báo Real-time">🔔 (3)</span>
-          <span className="user-profile">👋 Xin chào, Admin</span>
-        </div>
-      </header>
-      <div className="content-area">
-        {renderContent()}
-      </div>
-    </div>
-  );
-};
+import QuanLyDonVi from './pages/QuanLyDonVi';
+import BaoCaoThongKe from './pages/BaoCaoThongKe';
+import TuyenTruyen from './pages/TuyenTruyen';
+import LoginPage from './pages/LoginPage';
+import BaoCaoKetQua from './pages/BaoCaoKetQua';
 
 function App() {
+  const [userRole, setUserRole] = useState(null); // null, 'admin', hoặc 'unit'
   const [activeMenu, setActiveMenu] = useState('dashboard');
+
+  // Nếu chưa đăng nhập, chỉ hiện trang Login
+  if (!userRole) {
+    return <LoginPage onLogin={(role) => setUserRole(role)} />;
+  }
 
   return (
     <div className="app-layout">
-      <Sidebar activeMenu={activeMenu} setActiveMenu={setActiveMenu} />
-      <MainContent activeMenu={activeMenu} />
+      {/* Sidebar bây giờ nhận thêm userRole để ẩn/hiện menu */}
+      <Sidebar activeMenu={activeMenu} setActiveMenu={setActiveMenu} role={userRole} />
+      
+      <div className="main-content">
+        <header className="top-header">
+          <h1>Hệ thống Quản lý CATP</h1>
+          <button onClick={() => setUserRole(null)} className="btn-action">Đăng xuất</button>
+        </header>
+        
+        <div className="content-area">
+          {/* Logic hiển thị nội dung dựa trên menu */}
+          {activeMenu === 'dashboard' && <Dashboard />}
+          {activeMenu === 'tiep-nhan' && <TiepNhanDieuPhoi />}
+          {activeMenu === 'bao-cao-ket-qua' && <BaoCaoKetQua />} {/* MỚI THÊM: Dành riêng cho Đơn vị */}
+          {activeMenu === 'don-vi' && <QuanLyDonVi />}
+          {activeMenu === 'bao-cao' && <BaoCaoThongKe />}
+          {activeMenu === 'tuyen-truyen' && <TuyenTruyen />}
+        </div>
+      </div>
     </div>
   );
 }

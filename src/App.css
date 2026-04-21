@@ -323,3 +323,211 @@ body {
   cursor: pointer;
 }
 .btn-action:hover { background: #f1f5f9; }
+/* --- STYLE CHO TRANG ĐĂNG NHẬP --- */
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh; /* Cao bằng toàn bộ màn hình */
+  background-color: #e2e8f0; /* Màu nền xám nhạt */
+}
+
+.login-form {
+  background-color: white;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  width: 100%;
+  max-width: 400px; /* Form không bị quá to trên màn hình máy tính */
+  text-align: center;
+}
+
+.login-form h2 {
+  margin-top: 0;
+  color: #1e293b;
+  font-size: 26px;
+  margin-bottom: 5px;
+}
+
+.login-form p {
+  color: #64748b;
+  margin-bottom: 30px;
+  font-size: 14px;
+}
+
+.login-form input {
+  width: 100%;
+  padding: 14px 15px;
+  margin-bottom: 20px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-sizing: border-box; /* Giúp input không bị tràn ra ngoài form */
+  font-size: 15px;
+  transition: all 0.2s;
+}
+
+.login-form input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); /* Hiệu ứng phát sáng khi click vào */
+}
+
+.login-form .btn-primary {
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+  margin-top: 10px;
+}
+/* --- STYLE CHO FORM BÁO CÁO & DRAG/DROP --- */
+.form-bao-cao {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #334155;
+  font-size: 14px;
+}
+
+.form-group select, 
+.form-group textarea {
+  padding: 10px 15px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-family: inherit;
+  outline: none;
+}
+
+.form-group select:focus, 
+.form-group textarea:focus {
+  border-color: #3b82f6;
+}
+
+/* Khu vực Drop Zone */
+.drop-zone {
+  border: 2px dashed #94a3b8;
+  border-radius: 8px;
+  padding: 40px 20px;
+  text-align: center;
+  background-color: #f8fafc;
+  color: #64748b;
+  transition: all 0.2s ease;
+}
+
+.drop-zone:hover {
+  background-color: #f1f5f9;
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+/* Khu vực hiển thị ảnh xem trước */
+.image-preview-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.image-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+}
+
+.image-card img {
+  width: 100%;
+  height: 120px;
+  object-fit: cover; /* Cắt ảnh cho vừa khung hình mà không bị méo */
+  display: block;
+}
+
+.image-info {
+  padding: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+}
+
+.gps-tag {
+  font-size: 11px;
+  color: #ef4444;
+  font-weight: bold;
+}
+
+.btn-delete {
+  background: #fee2e2;
+  color: #ef4444;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-delete:hover {
+  background: #fca5a5;
+}
+/* --- STYLE CHO TRANG CHI TIẾT PHẢN ÁNH --- */
+.btn-back {
+  background: none;
+  border: none;
+  color: #3b82f6;
+  font-weight: bold;
+  cursor: pointer;
+  margin-bottom: 15px;
+  padding: 0;
+  font-size: 15px;
+}
+.btn-back:hover { text-decoration: underline; }
+
+.chi-tiet-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr; /* Chia 3 phần: Trái chiếm 2, Phải chiếm 1 */
+  gap: 20px;
+}
+
+.chi-tiet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 15px;
+  margin-bottom: 15px;
+}
+.chi-tiet-header h3 { margin: 0; color: #0f172a; font-size: 20px; }
+
+.info-list p { margin: 8px 0; color: #334155; line-height: 1.5; }
+.gps-text { color: #dc2626 !important; background: #fee2e2; padding: 10px; border-radius: 6px;}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  margin-top: 15px;
+}
+.gallery-img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+}
+
+.input-date {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-family: inherit;
+}
