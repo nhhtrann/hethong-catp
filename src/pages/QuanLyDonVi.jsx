@@ -1,3 +1,10 @@
+// src/pages/QuanLyDonVi.jsx
+import React from 'react';
+import { Table, Tag, Button, Card, Typography, Space } from 'antd';
+import { EditOutlined, PlusOutlined } from '@ant-design/icons';
+
+const { Title } = Typography;
+
 const QuanLyDonVi = () => {
   const danhSachDonVi = [
     { id: "DV01", ten: "Công an Quận Phú Nhuận", lienHe: "Đại úy Lê C", sdt: "0901234567", trangThai: "Hoạt động" },
@@ -5,41 +12,40 @@ const QuanLyDonVi = () => {
     { id: "DV03", ten: "Đội CSGT Bến Thành", lienHe: "Trung úy Nguyễn E", sdt: "0911222333", trangThai: "Tạm ngưng" }
   ];
 
+  const columns = [
+    { title: 'Mã ĐV', dataIndex: 'id', key: 'id', width: 80, align: 'center' },
+    { title: 'Tên đơn vị', dataIndex: 'ten', key: 'ten' },
+    { title: 'Người liên hệ', dataIndex: 'lienHe', key: 'lienHe' },
+    { title: 'Số điện thoại', dataIndex: 'sdt', key: 'sdt' },
+    {
+      title: 'Trạng thái',
+      key: 'trangThai',
+      dataIndex: 'trangThai',
+      render: (trangThai) => (
+        <Tag color={trangThai === 'Hoạt động' ? 'green' : 'red'}>
+          {trangThai.toUpperCase()}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Thao tác',
+      key: 'action',
+      render: () => (
+        <Button type="default" icon={<EditOutlined />} size="small">Sửa</Button>
+      ),
+    },
+  ];
+
   return (
-    <div className="card-tam">
-      <div className="tiep-nhan-header">
-        <h3>Quản lý Đơn vị phối hợp</h3>
-        <button className="btn-primary">+ Thêm đơn vị mới</button>
+    <div style={{ padding: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <Title level={2} style={{ margin: 0 }}>Quản lý Đơn vị phối hợp</Title>
+        <Button type="primary" icon={<PlusOutlined />}>Thêm đơn vị mới</Button>
       </div>
-      
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>Mã ĐV</th>
-            <th>Tên đơn vị</th>
-            <th>Người liên hệ (Chỉ huy)</th>
-            <th>Số điện thoại</th>
-            <th>Trạng thái</th>
-            <th>Thao tác</th>
-          </tr>
-        </thead>
-        <tbody>
-          {danhSachDonVi.map((dv) => (
-            <tr key={dv.id}>
-              <td><strong>{dv.id}</strong></td>
-              <td>{dv.ten}</td>
-              <td>{dv.lienHe}</td>
-              <td>{dv.sdt}</td>
-              <td>
-                <span className={`status-badge ${dv.trangThai === 'Hoạt động' ? 'success' : 'danger'}`}>
-                  {dv.trangThai}
-                </span>
-              </td>
-              <td><button className="btn-action">Sửa</button></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+
+      <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+        <Table columns={columns} dataSource={danhSachDonVi} rowKey="id" bordered />
+      </Card>
     </div>
   );
 };

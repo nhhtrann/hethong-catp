@@ -1,3 +1,10 @@
+// src/pages/TuyenTruyen.jsx
+import React from 'react';
+import { Card, Button, Typography, List, Space, Popconfirm } from 'antd';
+import { EditOutlined, DeleteOutlined, FormOutlined, EyeOutlined } from '@ant-design/icons';
+
+const { Title, Text } = Typography;
+
 const TuyenTruyen = () => {
   const baiViet = [
     { id: 1, tieuDe: "Cảnh báo lừa đảo qua mạng hình thức 'Việc nhẹ lương cao'", ngayDang: "20/04/2026", luotXem: 1250 },
@@ -6,26 +13,33 @@ const TuyenTruyen = () => {
   ];
 
   return (
-    <div className="card-tam">
-      <div className="tiep-nhan-header">
-        <h3>Quản lý Bài viết Tuyên truyền</h3>
-        <button className="btn-primary">📝 Soạn bài viết mới</button>
+    <div style={{ padding: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <Title level={2} style={{ margin: 0 }}>Quản lý Bài viết Tuyên truyền</Title>
+        <Button type="primary" icon={<FormOutlined />}>Soạn bài viết mới</Button>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-        {baiViet.map((bai) => (
-          <div key={bai.id} style={{ border: '1px solid #e2e8f0', padding: '15px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h4 style={{ margin: '0 0 5px 0', color: '#1e293b' }}>{bai.tieuDe}</h4>
-              <span style={{ fontSize: '13px', color: '#64748b' }}>Ngày đăng: {bai.ngayDang} • 👁️ {bai.luotXem} lượt xem</span>
-            </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button className="btn-action">Sửa</button>
-              <button className="btn-action" style={{ color: 'red' }}>Xóa</button>
-            </div>
-          </div>
-        ))}
-      </div>
+      <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+        <List
+          itemLayout="horizontal"
+          dataSource={baiViet}
+          renderItem={(item) => (
+            <List.Item
+              actions={[
+                <Button type="text" icon={<EditOutlined />}>Sửa</Button>,
+                <Popconfirm title="Bạn có chắc muốn xóa bài này?" okText="Xóa" cancelText="Hủy">
+                  <Button type="text" danger icon={<DeleteOutlined />}>Xóa</Button>
+                </Popconfirm>
+              ]}
+            >
+              <List.Item.Meta
+                title={<a>{item.tieuDe}</a>}
+                description={<Space><Text type="secondary">Ngày đăng: {item.ngayDang}</Text> <Text type="secondary"><EyeOutlined /> {item.luotXem} lượt xem</Text></Space>}
+              />
+            </List.Item>
+          )}
+        />
+      </Card>
     </div>
   );
 };

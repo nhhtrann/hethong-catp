@@ -1,101 +1,97 @@
-import { useState } from 'react';
+// src/components/ChiTietModal.jsx
+import React from 'react';
+import { Modal, Row, Col, Typography, Form, Select, Input, Upload, Button, message } from 'antd';
+import { InboxOutlined } from '@ant-design/icons';
 
-const ChiTietPhanAnh = ({ idPhanAnh, onBack }) => {
-  // Giả lập lấy dữ liệu chi tiết của vụ việc dựa vào ID truyền vào
-  const duLieu = {
-    id: idPhanAnh,
-    tieuDe: "Đua xe trái phép tại Lê Lợi",
-    nguoiBao: "Nguyễn Văn X (090xxxx123)",
-    thoiGian: "22:30 - 21/04/2026",
-    noiDung: "Có khoảng 10 đối tượng thanh thiếu niên không đội mũ bảo hiểm, lạng lách đánh võng và rú ga ầm ĩ trên đường Lê Lợi, đoạn trước mặt trường Quốc Học.",
-    toaDo: "16.4675° N, 107.5811° E (Đường Lê Lợi, TP Huế)",
-    anhMinhChung: [
-      "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=400&q=80", // Ảnh minh họa xe máy
-      "https://images.unsplash.com/photo-1449426468159-d96dbf08f19f?auto=format&fit=crop&w=400&q=80"
-    ]
+const { Title, Text, Paragraph } = Typography;
+const { Option } = Select;
+const { TextArea } = Input;
+const { Dragger } = Upload;
+
+const ChiTietModal = ({ visible, onClose, data }) => {
+  const [form] = Form.useForm();
+
+  // Xử lý khi bấm nút "Lưu Báo Cáo"
+  const handleLuuBaoCao = (values) => {
+    console.log('Dữ liệu form gửi lên API:', values);
+    message.success('Đã cập nhật báo cáo thành công!');
+    onClose(); // Đóng modal
   };
 
-  const [donViNhan, setDonViNhan] = useState("");
-  const [hanXuLy, setHanXuLy] = useState("");
-
-  const handleDieuPhoi = () => {
-    if (!donViNhan || !hanXuLy) {
-      alert("Vui lòng chọn đơn vị và thời hạn xử lý!");
-      return;
-    }
-    alert(`Đã giao vụ việc ${idPhanAnh} cho ${donViNhan}.\nHạn chót: ${hanXuLy}`);
-    onBack(); // Quay lại bảng danh sách
-  };
+  // Nếu chưa có dữ liệu thì không render gì cả
+  if (!data) return null;
 
   return (
-    <div className="chi-tiet-container">
-      {/* Nút quay lại */}
-      <button onClick={onBack} className="btn-back">
-        ⬅ Quay lại danh sách
-      </button>
-
-      <div className="chi-tiet-grid">
-        {/* CỘT TRÁI: THÔNG TIN & MINH CHỨNG */}
-        <div className="card-tam left-col">
-          <div className="chi-tiet-header">
-            <h3>{duLieu.tieuDe}</h3>
-            <span className="status-badge danger">Chưa xử lý</span>
+    <Modal
+      title={<Title level={4}>Chi tiết vụ việc: {data.tieuDe}</Title>}
+      open={visible}
+      onCancel={onClose}
+      width={900} // Modal rộng ra để chia 2 cột
+      footer={null} // Tắt footer mặc định để tự custom nút
+      centered
+    >
+      <Row gutter={24}>
+        {/* NỬA BÊN TRÁI: THÔNG TIN HỌC SINH GỬI (Chỉ Đọc) */}
+        <Col span={12} style={{ borderRight: '1px solid #f0f0f0' }}>
+          <div style={{ paddingRight: '10px' }}>
+            <p><Text strong>Thời gian:</Text> {data.ngayGui}</p>
+            <p><Text strong>Tọa độ GPS:</Text> 16.4637° N, 107.5909° E</p>
+            <p><Text strong>Nội dung chi tiết:</Text></p>
+            <Paragraph style={{ backgroundColor: '#f9fafb', padding: '10px', borderRadius: '4px' }}>
+              Vào lúc tan học có 2 học sinh xô xát ở cổng chính, có dấu hiệu mang theo vật cứng...
+            </Paragraph>
+            
+            <p><Text strong>Ảnh minh chứng từ người gửi:</Text></p>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              {/* Ảnh giả lập */}
+              <div style={{ width: 100, height: 100, backgroundColor: '#e5e7eb', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Ảnh 1</div>
+              <div style={{ width: 100, height: 100, backgroundColor: '#e5e7eb', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Ảnh 2</div>
+            </div>
           </div>
-          
-          <div className="info-list">
-            <p><strong>Mã vụ việc:</strong> {duLieu.id}</p>
-            <p><strong>Người phản ánh:</strong> {duLieu.nguoiBao}</p>
-            <p><strong>Thời gian ghi nhận:</strong> {duLieu.thoiGian}</p>
-            <p><strong>Nội dung:</strong> {duLieu.noiDung}</p>
-            <p className="gps-text"><strong>📍 Tọa độ GPS:</strong> {duLieu.toaDo}</p>
-          </div>
+        </Col>
 
-          <h4 style={{ marginTop: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
-            📸 Ảnh/Video Minh chứng (Gallery)
-          </h4>
-          <div className="gallery-grid">
-            {duLieu.anhMinhChung.map((anh, index) => (
-              <img key={index} src={anh} alt={`Minh chứng ${index + 1}`} className="gallery-img" />
-            ))}
-          </div>
-        </div>
+        {/* NỬA BÊN PHẢI: FORM CẬP NHẬT KẾT QUẢ (Cho phép Nhập) */}
+        <Col span={12}>
+          <div style={{ paddingLeft: '10px' }}>
+            <Title level={5} style={{ marginTop: 0 }}>Cập nhật xử lý</Title>
+            
+            <Form 
+              form={form} 
+              layout="vertical" 
+              onFinish={handleLuuBaoCao}
+              initialValues={{ trangThai: data.trangThai }} // Gắn trạng thái hiện tại vào Form
+            >
+              <Form.Item name="trangThai" label="Trạng thái vụ việc">
+                <Select>
+                  <Option value="Mới">Mới</Option>
+                  <Option value="Đang xử lý">Đang xử lý</Option>
+                  <Option value="Hoàn thành">Hoàn thành</Option>
+                </Select>
+              </Form.Item>
 
-        {/* CỘT PHẢI: KHU VỰC ĐIỀU PHỐI (DÀNH CHO ADMIN) */}
-        <div className="card-tam right-col">
-          <h3 style={{ marginTop: 0 }}>⚙️ Điều phối Xử lý</h3>
-          
-          <div className="form-group">
-            <label>Giao cho Đơn vị phối hợp:</label>
-            <select value={donViNhan} onChange={(e) => setDonViNhan(e.target.value)}>
-              <option value="">-- Chọn đơn vị --</option>
-              <option value="Công an TP Huế">Công an TP Huế</option>
-              <option value="Công an Phường Phú Nhuận">Công an Phường Phú Nhuận</option>
-              <option value="Đội CSGT Bến Thành">Đội CSGT Trật tự</option>
-            </select>
-          </div>
+              <Form.Item name="ghiChu" label="Ghi chú kết quả thực hiện" rules={[{ required: true, message: 'Vui lòng nhập kết quả xử lý!' }]}>
+                <TextArea rows={4} placeholder="Ví dụ: Đã mời phụ huynh lên làm việc..." />
+              </Form.Item>
 
-          <div className="form-group" style={{ marginTop: '15px' }}>
-            <label>Thời hạn xử lý (Deadline):</label>
-            <input 
-              type="date" 
-              value={hanXuLy} 
-              onChange={(e) => setHanXuLy(e.target.value)} 
-              className="input-date"
-            />
-          </div>
+              <Form.Item name="anhKetQua" label="Tải lên ảnh minh chứng kết quả">
+                <Dragger multiple={true} beforeUpload={() => false}>
+                  <p className="ant-upload-drag-icon"><InboxOutlined /></p>
+                  <p className="ant-upload-text">Nhấp hoặc kéo thả file vào đây</p>
+                </Dragger>
+              </Form.Item>
 
-          <div className="form-group" style={{ marginTop: '15px' }}>
-            <label>Chỉ đạo thêm (Tùy chọn):</label>
-            <textarea rows="3" placeholder="Ghi chú thêm cho đơn vị xử lý..."></textarea>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
+                <Button onClick={onClose}>Hủy</Button>
+                <Button type="primary" htmlType="submit" style={{ backgroundColor: '#10b981' }}>
+                  Lưu Báo Cáo
+                </Button>
+              </div>
+            </Form>
           </div>
-
-          <button onClick={handleDieuPhoi} className="btn-primary" style={{ width: '100%', marginTop: '20px' }}>
-            ✅ Giao việc & Lên lịch
-          </button>
-        </div>
-      </div>
-    </div>
+        </Col>
+      </Row>
+    </Modal>
   );
 };
 
-export default ChiTietPhanAnh;
+export default ChiTietModal;
