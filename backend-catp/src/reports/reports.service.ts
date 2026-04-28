@@ -24,10 +24,51 @@ export class ReportsService {
   // Các hàm này tạm để trống, mình sẽ làm sau
   findOne(id: number) { return `This action returns a #${id} report`; }
   remove(id: number) { return `This action removes a #${id} report`; }
+  
   // Cập nhật dữ liệu dựa theo ID
   async update(id: number, updateData: any) {
     await this.reportsRepository.update(id, updateData);
     // Trả về dữ liệu sau khi đã cập nhật xong
     return this.reportsRepository.findOne({ where: { id } });
   }
+  // src/reports/reports.service.ts
+
+async getStats() {
+  // 1. Đếm các con số tổng quát
+  const total = await this.reportsRepository.count();
+  const processed = await this.reportsRepository.count({ where: { trangThai: 'Hoàn thành' } });
+  const pending = await this.reportsRepository.count({ where: { trangThai: 'Đang xử lý' } });
+  const news = await this.reportsRepository.count({ where: { trangThai: 'Mới' } });
+
+  // 2. Gom nhóm dữ liệu cho Biểu đồ (Group by Mảng vi phạm)
+  const chartRawData = await this.reportsRepository
+    .createQueryBuilder('report')
+    .select('report.mangViPham', 'mang')
+    .addSelect('COUNT(report.id)', 'tongSo')
+    .addSelect("SUM(CASE WHEN report.trangThai = 'Hoàn thành' THEN 1 ELSE 0 END)", 'daXuLy')
+    .groupBy('report.mangViPham')
+    .getRawMany();
+
+  // 3. Gán màu sắc cho từng mảng để biểu đồ đẹp hơn
+  const colorMap = {
+    'Giao thông': '#3b82f6',
+    'Bạo lực': '#ef4444',
+    'An ninh Trật tự': '#10b981',
+    'Lừa đảo': '#f59e0b',
+    'Ma túy': '#8b5cf6'
+  };
+
+  const chartData = chartRawData.map(item => ({
+    mang: item.mang,
+    tongSo: Number(item.tongSo),
+    daXuLy: Number(item.daXuLy),
+    mauSac: colorMap[item.mang] || '#6b7280'
+  }));
+
+  return {
+    stats: { total, processed, pending, news },
+    chartData
+  };
+}
+  
 }

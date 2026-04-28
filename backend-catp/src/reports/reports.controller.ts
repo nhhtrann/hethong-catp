@@ -17,6 +17,11 @@ export class ReportsController {
     return this.reportsService.findAll();
   }
 
+  @Get('stats') // Đường dẫn sẽ là http://localhost:3000/reports/stats
+  findAllStats() {
+    return this.reportsService.getStats();
+  } 
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.reportsService.findOne(+id);
@@ -32,4 +37,6 @@ export class ReportsController {
   remove(@Param('id') id: string) {
     return this.reportsService.remove(+id);
   }
+
+
 }
