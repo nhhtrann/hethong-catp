@@ -17,18 +17,18 @@ export class UnitsController {
     return this.unitsService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.unitsService.findOne(+id);
-  }
+  // @Get(':id')
+  // findOne(@Param('id') id: string) {
+  //   return this.unitsService.findOne(+id);
+  // }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUnitDto: UpdateUnitDto) {
-    return this.unitsService.update(+id, updateUnitDto);
-  }
+  // @Patch(':id')
+  // update(@Param('id') id: string, @Body() updateUnitDto: UpdateUnitDto) {
+  //   return this.unitsService.update(+id, updateUnitDto);
+  // }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.unitsService.remove(+id);
-  }
+  // @Delete(':id')
+  // remove(@Param('id') id: string) {
+  //   return this.unitsService.remove(+id);
+  // }
 }

@@ -1,26 +1,25 @@
 import { Injectable } from '@nestjs/common';
-import { CreateUnitDto } from './dto/create-unit.dto';
-import { UpdateUnitDto } from './dto/update-unit.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Unit } from './entities/unit.entity';
 
 @Injectable()
 export class UnitsService {
-  create(createUnitDto: CreateUnitDto) {
-    return 'This action adds a new unit';
+  constructor(
+    @InjectRepository(Unit)
+    private unitsRepository: Repository<Unit>,
+  ) {}
+
+  // Hàm lưu Đơn vị mới vào SQL
+  create(createUnitDto: any) {
+    const newUnit = this.unitsRepository.create(createUnitDto);
+    return this.unitsRepository.save(newUnit);
   }
 
+  // Hàm lấy toàn bộ danh sách Đơn vị
   findAll() {
-    return `This action returns all units`;
+    return this.unitsRepository.find();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} unit`;
-  }
-
-  update(id: number, updateUnitDto: UpdateUnitDto) {
-    return `This action updates a #${id} unit`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} unit`;
-  }
+  
 }
