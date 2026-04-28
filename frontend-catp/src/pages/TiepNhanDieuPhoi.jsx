@@ -12,6 +12,12 @@ const TiepNhanDieuPhoi = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [data, setData] = useState([]);
+  const [filteredData, setFilteredData] = useState([]); // Dữ liệu dùng để hiển thị lên bảng
+  
+  // Các biến lưu điều kiện lọc
+  const [searchText, setSearchText] = useState('');
+  const [filterMang, setFilterMang] = useState(null);
+  const [filterTrangThai, setFilterTrangThai] = useState(null);
 // Dùng useEffect để tự động gọi API ngay khi mở trang
   useEffect(() => {
     // Gọi API GET từ Backend NestJS
@@ -35,9 +41,63 @@ const TiepNhanDieuPhoi = () => {
         
         // Cập nhật dữ liệu thật vào Bảng
         setData(formattedData);
+        setFilteredData(formattedData);
       })
       .catch(error => console.error('Lỗi khi gọi API:', error));
   }, []);
+  // Tự động chạy mỗi khi từ khóa tìm kiếm hoặc bộ lọc thay đổi
+  useEffect(() => {
+    let result = data;
+
+    // 1. Lọc theo chữ gõ vào (Tìm trong Tiêu đề hoặc Nội dung)
+    if (searchText) {
+      const lowercasedFilter = searchText.toLowerCase();
+      result = result.filter(item => 
+        item.tieuDe?.toLowerCase().includes(lowercasedFilter) ||
+        item.noiDung?.toLowerCase().includes(lowercasedFilter)
+      );
+    }
+
+    // 2. Lọc theo Mảng vi phạm
+    if (filterMang && filterMang !== 'Tất cả') {
+      result = result.filter(item => item.mang === filterMang);
+    }
+
+    // 3. Lọc theo Trạng thái
+    if (filterTrangThai && filterTrangThai !== 'Tất cả') {
+      result = result.filter(item => item.trangThai === filterTrangThai);
+    }
+
+    setFilteredData(result);
+  }, [searchText, filterMang, filterTrangThai, data]);
+  // Hàm xuất dữ liệu ra file CSV
+  const handleExport = () => {
+    // Tạo dòng tiêu đề
+    const headers = ['STT', 'Tiêu đề', 'Mảng vi phạm', 'Ngày gửi', 'Đơn vị', 'Trạng thái'];
+    
+    // Tạo các dòng dữ liệu
+    const rows = filteredData.map((item, index) => [
+      index + 1,
+      `"${item.tieuDe}"`, // Thêm ngoặc kép để tránh lỗi nếu tiêu đề có dấu phẩy
+      `"${item.mang}"`,
+      `"${item.ngayGui}"`,
+      `"${item.donVi}"`,
+      `"${item.trangThai}"`
+    ]);
+
+    // Ghép lại thành cấu trúc file CSV có hỗ trợ tiếng Việt (UTF-8 BOM)
+    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" 
+      + [headers.join(','), ...rows.map(e => e.join(','))].join("\n");
+
+    // Tạo link tải ảo và kích hoạt nó
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "DanhSachPhanAnh.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
   // Cấu hình các cột cho Bảng
   const columns = [
     { title: 'STT', dataIndex: 'stt', key: 'stt', width: 60, align: 'center' },
@@ -85,37 +145,48 @@ const TiepNhanDieuPhoi = () => {
       <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
         
         {/* THANH CÔNG CỤ TÌM KIẾM & LỌC */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-          <Space>
-            <Input 
-              placeholder="Nhập tiêu đề hoặc mã vụ việc..." 
-              prefix={<SearchOutlined />} 
-              style={{ width: 300 }} 
-            />
-            <Select defaultValue="all" style={{ width: 150 }}>
-              <Option value="all">Tất cả mảng</Option>
-              <Option value="giaothong">Giao thông</Option>
-              <Option value="baoluc">Bạo lực học đường</Option>
-            </Select>
-            <Select defaultValue="all" style={{ width: 150 }}>
-              <Option value="all">Tất cả trạng thái</Option>
-              <Option value="moi">Mới</Option>
-              <Option value="dangxuly">Đang xử lý</Option>
-              <Option value="hoanthanh">Hoàn thành</Option>
-            </Select>
-          </Space>
-          
-          <Button type="primary" style={{ backgroundColor: '#10b981' }} icon={<DownloadOutlined />}>
-            Xuất Excel
-          </Button>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: 20,
+        flexWrap: 'wrap', // Tự động rớt dòng nếu màn hình quá nhỏ
+        gap: '10px'
+      }}>
+        {/* Nhóm bên trái: Tìm kiếm và Lọc */}
+        <Space wrap>
+          <Input 
+            placeholder="Tìm kiếm tiêu đề, nội dung..." 
+            prefix={<SearchOutlined />} 
+            style={{ width: 250 }} // Thu nhỏ lại một chút
+            onChange={(e) => setSearchText(e.target.value)}
+          />
+          <Select defaultValue="Tất cả" style={{ width: 140 }} onChange={(value) => setFilterMang(value)}>
+            <Select.Option value="Tất cả">Tất cả mảng</Select.Option>
+            <Select.Option value="Giao thông">Giao thông</Select.Option>
+            <Select.Option value="Bạo lực">Bạo lực</Select.Option>
+            <Select.Option value="Ma túy">Ma túy</Select.Option>
+            <Select.Option value="An ninh Trật tự">An ninh Trật tự</Select.Option>
+          </Select>
+          <Select defaultValue="Tất cả" style={{ width: 150 }} onChange={(value) => setFilterTrangThai(value)}>
+            <Select.Option value="Tất cả">Tất cả trạng thái</Select.Option>
+            <Select.Option value="Mới">Mới</Select.Option>
+            <Select.Option value="Đang xử lý">Đang xử lý</Select.Option>
+            <Select.Option value="Hoàn thành">Hoàn thành</Select.Option>
+            <Select.Option value="Trễ hạn">Trễ hạn</Select.Option>
+          </Select>
+        </Space>
+
+        {/* Nhóm bên phải: Nút Xuất dữ liệu */}
+        <Button type="primary" icon={<DownloadOutlined />} onClick={handleExport}>
+          Xuất dữ liệu
+        </Button>
         </div>
 
         {/* BẢNG DỮ LIỆU */}
         <Table 
           columns={columns} 
-          dataSource={data} 
-          pagination={{ pageSize: 5 }} // Tự động phân trang, mỗi trang 5 dòng
-          bordered
+          dataSource={filteredData} 
         />
       </Card>
       <ChiTietPhanAnh 
