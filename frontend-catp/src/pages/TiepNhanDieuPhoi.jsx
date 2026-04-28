@@ -20,13 +20,17 @@ const TiepNhanDieuPhoi = () => {
       .then(result => {
         // Biến đổi dữ liệu Backend trả về cho khớp với bảng Ant Design
         const formattedData = result.map((item, index) => ({
+          id : item.id, // Lưu ID gốc để dùng khi cần gọi API PATCH
           key: item.id.toString(), // Khóa duy nhất cho bảng
           stt: index + 1,
           tieuDe: item.tieuDe,
           mang: item.mangViPham,
           ngayGui: item.ngayGui ? new Date(item.ngayGui).toLocaleDateString('vi-VN') : '',
           donVi: 'Chưa phân công', // Tạm thời để trống vì chưa nối bảng Units
-          trangThai: item.trangThai
+          trangThai: item.trangThai,
+          noiDung: item.noiDung,
+          ghiChu: item.ghiChuKetQua,
+          anhKetQua: item.anhKetQua // Lưu nguyên chuỗi JSON để đổ vào Modal sau này
         }));
         
         // Cập nhật dữ liệu thật vào Bảng

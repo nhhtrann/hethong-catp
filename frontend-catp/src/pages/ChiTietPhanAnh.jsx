@@ -1,8 +1,7 @@
 // src/components/ChiTietModal.jsx
 import React from 'react';
-import { Modal, Row, Col, Typography, Form, Select, Input, Upload, Button, message } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
-
+import { Modal, Row, Col, Typography, Form, Select, Input, Upload, Button, message, Image } from 'antd';
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
@@ -10,34 +9,64 @@ const { Dragger } = Upload;
 
 const ChiTietModal = ({ visible, onClose, data }) => {
   const [form] = Form.useForm();
+  // Lệnh ép Form phải tự động điền dữ liệu mỗi khi mở Modal
+  React.useEffect(() => {
+    if (data && visible) {
+      form.setFieldsValue({
+        trangThai: data.trangThai,
+        ghiChu: data.ghiChu, // Đổ chữ từ Database vào ô TextBox
+        anhKetQua: data.anhKetQua ? JSON.parse(data.anhKetQua).map(fileName => ({
+          name: fileName,
+          status: 'done',
+          url: `http://localhost:3000/uploads/${fileName}`
+        })) : []
+      });
+    }
+  }, [data, visible, form]);
+
 
   // Xử lý khi bấm nút "Lưu Báo Cáo"
-  // Xử lý khi bấm nút "Lưu Báo Cáo"
-  const handleLuuBaoCao = (values) => {
-    // Gọi API PATCH tới Backend, truyền kèm ID của vụ việc đang xem
-    fetch(`http://localhost:3000/reports/${data.id}`, {
+const handleLuuBaoCao = async (values) => {
+  // Kiểm tra xem data.id có tồn tại không để tránh lỗi cập nhật nhầm
+  if (!data?.id) {
+    message.error("Không tìm thấy ID vụ việc!");
+    return;
+  }
+
+  try {
+    // Xử lý danh sách ảnh từ Ant Design Upload
+    const fileNames = values.anhKetQua?.fileList?.map(f => f.name) || [];
+
+    // Sử dụng await để đợi phản hồi từ Server
+    const response = await fetch(`http://localhost:3000/reports/${data.id}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
       },
-      // Gửi Trạng thái mới (và ghi chú nếu bạn có cột ghi chú trong SQL) xuống Backend
       body: JSON.stringify({
-        trangThai: values.trangThai
+        trangThai: values.trangThai,
+        ghiChuKetQua: values.ghiChu || "",
+        anhKetQua: JSON.stringify(fileNames) 
       })
-    })
-    .then(response => response.json())
-    .then(result => {
-      message.success('Đã cập nhật trạng thái thành công!');
-      onClose(); // Đóng modal
-      
-      // MẸO: Tải lại trang để bảng dữ liệu cập nhật trạng thái mới
-      window.location.reload(); 
-    })
-    .catch(error => {
-      message.error('Lỗi khi cập nhật!');
-      console.error(error);
     });
-  };
+
+    if (response.ok) {
+      message.success('Cập nhật dữ liệu vào SQL Server thành công!');
+      onClose(); // Đóng Modal ngay lập tức
+      
+      // Tải lại trang để cập nhật bảng (localStorage đã giữ lại đăng nhập nên không lo)
+      setTimeout(() => {
+        window.location.reload();
+      }, 500); 
+    } else {
+      const errorData = await response.json();
+      message.error(`Lỗi từ Server: ${errorData.message || 'Không thể lưu'}`);
+    }
+  } catch (error) {
+    console.error("Lỗi kết nối API:", error);
+    message.error('Không thể kết nối tới Backend. Hãy kiểm tra xem NestJS đã chạy chưa!');
+  }
+};
 
   // Nếu chưa có dữ liệu thì không render gì cả
   if (!data) return null;
@@ -57,16 +86,27 @@ const ChiTietModal = ({ visible, onClose, data }) => {
           <div style={{ paddingRight: '10px' }}>
             <p><Text strong>Thời gian:</Text> {data.ngayGui}</p>
             <p><Text strong>Tọa độ GPS:</Text> 16.4637° N, 107.5909° E</p>
-            <p><Text strong>Nội dung chi tiết:</Text></p>
+           <p><Text strong>Nội dung chi tiết:</Text></p>
             <Paragraph style={{ backgroundColor: '#f9fafb', padding: '10px', borderRadius: '4px' }}>
-              Vào lúc tan học có 2 học sinh xô xát ở cổng chính, có dấu hiệu mang theo vật cứng...
+              {data.noiDung || "Chưa có nội dung mô tả."}
             </Paragraph>
             
             <p><Text strong>Ảnh minh chứng từ người gửi:</Text></p>
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              {/* Ảnh giả lập */}
-              <div style={{ width: 100, height: 100, backgroundColor: '#e5e7eb', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Ảnh 1</div>
-              <div style={{ width: 100, height: 100, backgroundColor: '#e5e7eb', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Ảnh 2</div>
+              {data.anhKetQua ? (
+              JSON.parse(data.anhKetQua).map((tenFile, index) => (
+              <Image
+                key={index}
+                width={100}
+                height={100}
+                style={{ objectFit: 'cover', borderRadius: '8px' }}
+                src={`http://localhost:3000/uploads/${tenFile}`}
+                fallback="https://via.placeholder.com/100?text=Error" // Hiện ảnh lỗi nếu ko tìm thấy file
+              />
+            ))
+          ) : (
+            <Text type="secondary">Chưa có ảnh minh chứng.</Text>
+        )}
             </div>
           </div>
         </Col>

@@ -13,11 +13,24 @@ import LoginPage from './pages/LoginPage';
 import BaoCaoKetQua from './pages/BaoCaoKetQua';
 
 function App() {
-  const [userRole, setUserRole] = useState(null); // null, 'admin', hoặc 'unit'
+  // Lấy role từ bộ nhớ trình duyệt, nếu không có thì mặc định là null
+const [userRole, setUserRole] = useState(localStorage.getItem('userRole') || null);
+
+// Hàm xử lý đăng nhập (Lưu vào State và Lưu vào Trình duyệt)
+const handleLogin = (role) => {
+  setUserRole(role);
+  localStorage.setItem('userRole', role);
+};
+
+// Hàm xử lý đăng xuất (Xóa khỏi State và Xóa khỏi Trình duyệt)
+const handleLogout = () => {
+  setUserRole(null);
+  localStorage.removeItem('userRole');
+};
 
   // Nếu chưa đăng nhập, chỉ hiện trang Login
   if (!userRole) {
-    return <LoginPage onLogin={(role) => setUserRole(role)} />;
+    return <LoginPage onLogin={handleLogin} />;
   }
 
   return (
@@ -30,7 +43,7 @@ function App() {
         <div className="main-content">
           <header className="top-header">
             <h1>Hệ thống Quản lý CATP</h1>
-            <button onClick={() => setUserRole(null)} className="btn-action">Đăng xuất</button>
+            <button onClick={handleLogout} className="btn-action">Đăng xuất</button>
           </header>
           
           <div className="content-area">
