@@ -2,20 +2,19 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const Sidebar = ({ role }) => {
-  const navigate = useNavigate(); // Hàm dùng để chuyển URL
-  const location = useLocation(); // Hàm dùng để lấy URL hiện tại (để làm sáng menu)
+  const navigate = useNavigate(); 
+  const location = useLocation(); 
 
-  // 1. Khai báo danh sách TẤT CẢ menu với 'path' thay vì 'id'
+  // ĐÃ SỬA: Phân quyền rạch ròi 100%. Admin có 5 trang, Đơn vị có đúng 1 trang.
   const allMenus = [
-    { path: '/dashboard', icon: '📊', label: 'Tổng quan (Dashboard)', roles: ['admin', 'unit'] },
-    { path: '/tiep-nhan', icon: '📩', label: 'Tiếp nhận & Điều phối', roles: ['admin', 'unit'] },
+    { path: '/dashboard', icon: '📊', label: 'Tổng quan (Dashboard)', roles: ['admin'] },
+    { path: '/tiep-nhan', icon: '📩', label: 'Tiếp nhận & Điều phối', roles: ['admin'] },
     { path: '/bao-cao-ket-qua', icon: '📝', label: 'Nhiệm vụ & Báo cáo', roles: ['unit'] },
     { path: '/don-vi', icon: '🏢', label: 'Quản lý Đơn vị', roles: ['admin'] },
     { path: '/bao-cao', icon: '📈', label: 'Báo cáo & Thống kê', roles: ['admin'] },
     { path: '/tuyen-truyen', icon: '📰', label: 'Tuyên truyền Pháp luật', roles: ['admin'] }
   ];
 
-  // 2. Lọc menu theo quyền
   const allowedMenus = allMenus.filter(menu => menu.roles.includes(role));
 
   return (
@@ -31,9 +30,7 @@ const Sidebar = ({ role }) => {
         {allowedMenus.map((item) => (
           <li 
             key={item.path} 
-            // Nếu URL hiện tại trùng với path của menu thì thêm class 'active'
             className={location.pathname === item.path ? 'active' : ''}
-            // Dùng navigate để đổi URL trên trình duyệt
             onClick={() => navigate(item.path)}
           >
             <span className="icon">{item.icon}</span> {item.label}

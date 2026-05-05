@@ -1,50 +1,50 @@
-// src/pages/TiepNhanDieuPhoi.jsx
+// src/pages/ReportDispatch.jsx
 import React, { useState, useEffect } from 'react';
-import ReportDetail from './ReportDetail'; // (Chỉnh lại đường dẫn nếu cần)
-import { Table, Tag, Space, Button, Input, Select, Card, Typography } from 'antd';
-import { SearchOutlined, EyeOutlined, DownloadOutlined } from '@ant-design/icons';
+import { Table, Tag, Card, Typography, Input, Space, Button, Select } from 'antd'; // Đã thêm Select
+import { SearchOutlined, EyeOutlined, DownloadOutlined } from '@ant-design/icons'; // Đã thêm DownloadOutlined
+
+// IMPORT MODAL DÙNG CHUNG VÀO ĐÂY (Lưu ý đường dẫn thư mục components)
+import ReportDetail from '../pages/ReportDetail';
 
 const { Title } = Typography;
-const { Option } = Select;
 
 const ReportDispatch = () => {
-  // Dữ liệu giả lập (Mock data) 
+  const [data, setData] = useState([]);
+  const [filteredData, setFilteredData] = useState([]);
+  const [searchText, setSearchText] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
-  const [data, setData] = useState([]);
-  const [filteredData, setFilteredData] = useState([]); // Dữ liệu dùng để hiển thị lên bảng
   
   // Các biến lưu điều kiện lọc
-  const [searchText, setSearchText] = useState('');
   const [filterMang, setFilterMang] = useState(null);
   const [filterTrangThai, setFilterTrangThai] = useState(null);
-// Dùng useEffect để tự động gọi API ngay khi mở trang
+
   useEffect(() => {
-    // Gọi API GET từ Backend NestJS
     fetch('http://localhost:3000/reports')
-      .then(response => response.json())
+      .then(res => res.json())
       .then(result => {
-        // Biến đổi dữ liệu Backend trả về cho khớp với bảng Ant Design
-        const formattedData = result.map((item, index) => ({
-          id : item.id, // Lưu ID gốc để dùng khi cần gọi API PATCH
-          key: item.id.toString(), // Khóa duy nhất cho bảng
-          stt: index + 1,
-          tieuDe: item.tieuDe,
-          mang: item.mangViPham,
-          ngayGui: item.ngayGui ? new Date(item.ngayGui).toLocaleDateString('vi-VN') : '',
-          donVi: item.donViXuLy || 'Chưa phân công', // Tạm thời để trống vì chưa nối bảng Units
-          trangThai: item.trangThai,
-          noiDung: item.noiDung,
-          ghiChu: item.ghiChuKetQua,
-          anhKetQua: item.anhKetQua // Lưu nguyên chuỗi JSON để đổ vào Modal sau này
-        }));
-        
-        // Cập nhật dữ liệu thật vào Bảng
-        setData(formattedData);
-        setFilteredData(formattedData);
+        if (Array.isArray(result)) {
+          const formattedData = result.map((item, index) => ({
+            id: item.id,
+            key: item.id?.toString(),
+            stt: index + 1,
+            tieuDe: item.tieuDe,
+            mang: item.mangViPham,
+            donViXuLy: item.donViXuLy || '',
+            trangThai: item.trangThai,
+            noiDung: item.noiDung,
+            ghiChu: item.ghiChuKetQua,
+            anhKetQua: item.anhKetQua,
+            anhKiemChung : item.anhKiemChung, // Thêm trường ảnh chứng cứ nếu có
+            ngayGui: item.ngayGui ? new Date(item.ngayGui).toLocaleDateString('vi-VN') : '',
+          }));
+          setData(formattedData);
+          setFilteredData(formattedData);
+        }
       })
       .catch(error => console.error('Lỗi khi gọi API:', error));
   }, []);
+
   // Tự động chạy mỗi khi từ khóa tìm kiếm hoặc bộ lọc thay đổi
   useEffect(() => {
     let result = data;
@@ -70,18 +70,19 @@ const ReportDispatch = () => {
 
     setFilteredData(result);
   }, [searchText, filterMang, filterTrangThai, data]);
+
   // Hàm xuất dữ liệu ra file CSV
   const handleExport = () => {
     // Tạo dòng tiêu đề
-    const headers = ['STT', 'Tiêu đề', 'Mảng vi phạm', 'Ngày gửi', 'Đơn vị', 'Trạng thái'];
+    const headers = ['STT', 'Tiêu đề', 'Mảng vi phạm', 'Ngày gửi', 'Đơn vị xử lý', 'Trạng thái'];
     
     // Tạo các dòng dữ liệu
     const rows = filteredData.map((item, index) => [
       index + 1,
-      `"${item.tieuDe}"`, // Thêm ngoặc kép để tránh lỗi nếu tiêu đề có dấu phẩy
+      `"${item.tieuDe}"`, 
       `"${item.mang}"`,
       `"${item.ngayGui}"`,
-      `"${item.donVi}"`,
+      `"${item.donViXuLy}"`, // Đã sửa từ item.donVi thành item.donViXuLy
       `"${item.trangThai}"`
     ]);
 
@@ -98,25 +99,24 @@ const ReportDispatch = () => {
     link.click();
     document.body.removeChild(link);
   };
-  // Cấu hình các cột cho Bảng
+
   const columns = [
     { title: 'STT', dataIndex: 'stt', key: 'stt', width: 60, align: 'center' },
-    { title: 'Tiêu đề vụ việc', dataIndex: 'tieuDe', key: 'tieuDe' },
-    { title: 'Mảng vi phạm', dataIndex: 'mang', key: 'mang' },
-    { title: 'Ngày gửi', dataIndex: 'ngayGui', key: 'ngayGui' },
-    { title: 'Đơn vị xử lý', dataIndex: 'donVi', key: 'donVi' },
+    { title: 'Tiêu đề vụ việc', dataIndex: 'tieuDe', key: 'tieuDe', width: '25%' },
+    { title: 'Mảng vi phạm', dataIndex: 'mang', key: 'mang', width: '15%' },
+    { 
+      title: 'Đơn vị xử lý', 
+      dataIndex: 'donViXuLy', 
+      key: 'donViXuLy',
+      render: (val) => val ? <Tag color="purple">{val}</Tag> : <Tag color="default">Chưa phân công</Tag>
+    },
     {
       title: 'Trạng thái',
       key: 'trangThai',
       dataIndex: 'trangThai',
       render: (trangThai) => {
-        // Tự động tô màu thẻ Tag dựa trên chữ Trạng thái
-        let color = 'blue';
-        if (trangThai === 'Hoàn thành') color = 'green';
-        if (trangThai === 'Trễ hạn') color = 'volcano';
-        if (trangThai === 'Mới') color = 'geekblue';
-        if (trangThai === 'Đang xử lý') color = 'gold';
-        return <Tag color={color} key={trangThai}>{trangThai.toUpperCase()}</Tag>;
+        let color = trangThai === 'Mới' ? 'volcano' : (trangThai === 'Đang xử lý' ? 'gold' : (trangThai === 'Chờ duyệt' ? 'blue' : 'green'));
+        return <Tag color={color}>{trangThai?.toUpperCase()}</Tag>;
       },
     },
     {
@@ -132,7 +132,7 @@ const ReportDispatch = () => {
             setIsModalVisible(true);
           }}
         >
-          Xem
+          Điều phối
         </Button>
       ),
     },
@@ -145,42 +145,43 @@ const ReportDispatch = () => {
       <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
         
         {/* THANH CÔNG CỤ TÌM KIẾM & LỌC */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: 20,
-        flexWrap: 'wrap', // Tự động rớt dòng nếu màn hình quá nhỏ
-        gap: '10px'
-      }}>
-        {/* Nhóm bên trái: Tìm kiếm và Lọc */}
-        <Space wrap>
-          <Input 
-            placeholder="Tìm kiếm tiêu đề, nội dung..." 
-            prefix={<SearchOutlined />} 
-            style={{ width: 250 }} // Thu nhỏ lại một chút
-            onChange={(e) => setSearchText(e.target.value)}
-          />
-          <Select defaultValue="Tất cả" style={{ width: 140 }} onChange={(value) => setFilterMang(value)}>
-            <Select.Option value="Tất cả">Tất cả mảng</Select.Option>
-            <Select.Option value="Giao thông">Giao thông</Select.Option>
-            <Select.Option value="Bạo lực">Bạo lực</Select.Option>
-            <Select.Option value="Ma túy">Ma túy</Select.Option>
-            <Select.Option value="An ninh Trật tự">An ninh Trật tự</Select.Option>
-          </Select>
-          <Select defaultValue="Tất cả" style={{ width: 150 }} onChange={(value) => setFilterTrangThai(value)}>
-            <Select.Option value="Tất cả">Tất cả trạng thái</Select.Option>
-            <Select.Option value="Mới">Mới</Select.Option>
-            <Select.Option value="Đang xử lý">Đang xử lý</Select.Option>
-            <Select.Option value="Hoàn thành">Hoàn thành</Select.Option>
-            <Select.Option value="Trễ hạn">Trễ hạn</Select.Option>
-          </Select>
-        </Space>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: 20,
+          flexWrap: 'wrap', 
+          gap: '10px'
+        }}>
+          {/* Nhóm bên trái: Tìm kiếm và Lọc */}
+          <Space wrap>
+            <Input 
+              placeholder="Tìm kiếm tiêu đề, nội dung..." 
+              prefix={<SearchOutlined />} 
+              style={{ width: 250 }}
+              onChange={(e) => setSearchText(e.target.value)}
+            />
+            <Select defaultValue="Tất cả" style={{ width: 140 }} onChange={(value) => setFilterMang(value)}>
+              <Select.Option value="Tất cả">Tất cả mảng</Select.Option>
+              <Select.Option value="Giao thông">Giao thông</Select.Option>
+              <Select.Option value="Bạo lực">Bạo lực</Select.Option>
+              <Select.Option value="Ma túy">Ma túy</Select.Option>
+              <Select.Option value="An ninh Trật tự">An ninh Trật tự</Select.Option>
+            </Select>
+            <Select defaultValue="Tất cả" style={{ width: 160 }} onChange={(value) => setFilterTrangThai(value)}>
+              <Select.Option value="Tất cả">Tất cả trạng thái</Select.Option>
+              <Select.Option value="Mới">Mới</Select.Option>
+              <Select.Option value="Đang xử lý">Đang xử lý</Select.Option>
+              <Select.Option value="Chờ duyệt">Chờ duyệt</Select.Option>
+              <Select.Option value="Hoàn thành">Hoàn thành</Select.Option>
+              <Select.Option value="Trễ hạn">Trễ hạn</Select.Option>
+            </Select>
+          </Space>
 
-        {/* Nhóm bên phải: Nút Xuất dữ liệu */}
-        <Button type="primary" icon={<DownloadOutlined />} onClick={handleExport}>
-          Xuất dữ liệu
-        </Button>
+          {/* Nhóm bên phải: Nút Xuất dữ liệu */}
+          <Button type="primary" icon={<DownloadOutlined />} onClick={handleExport}>
+            Xuất dữ liệu
+          </Button>
         </div>
 
         {/* BẢNG DỮ LIỆU */}
@@ -189,13 +190,15 @@ const ReportDispatch = () => {
           dataSource={filteredData} 
         />
       </Card>
+      
+      {/* GỌI MODAL DÙNG CHUNG VỚI QUYỀN ADMIN */}
       <ReportDetail 
-  visible={isModalVisible} 
-  onClose={() => setIsModalVisible(false)} 
-  data={selectedRecord} 
-/>
+        visible={isModalVisible} 
+        onClose={() => setIsModalVisible(false)} 
+        data={selectedRecord} 
+        mode="admin" 
+      />
     </div>
-    
   );
 };
 

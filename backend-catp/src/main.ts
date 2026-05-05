@@ -1,17 +1,21 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { join } from 'path';
+// THÊM 2 DÒNG IMPORT NÀY
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
+import { json, urlencoded } from 'express'; 
 
 async function bootstrap() {
-  // Thay đổi dòng này để sử dụng Express làm nền tảng
+  // BƯỚC 1: Đổi NestFactory.create thành NestExpressApplication
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   
-  app.enableCors();
+  app.enableCors(); 
+  app.use(json({ limit: '50mb' }));
+  app.use(urlencoded({ extended: true, limit: '50mb' }));
 
-  // Cấu hình: Khi truy cập http://localhost:3000/uploads/... sẽ thấy ảnh
+  // BƯỚC 2: CẤP QUYỀN PUBLIC CHO THƯ MỤC "uploads"
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
-    prefix: '/uploads',
+    prefix: '/uploads/', // Khi link là localhost:3000/uploads/... thì sẽ vào thư mục này tìm
   });
 
   await app.listen(3000);

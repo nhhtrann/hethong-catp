@@ -32,6 +32,8 @@ export class Report {
   // THÊM DÒNG NÀY: Lưu tên đơn vị được giao nhiệm vụ
   @Column({ nullable: true })
   donViXuLy: string; 
-
+  
+  @Column({ type: 'nvarchar', length: 'max', nullable: true })
+  anhKiemChung: string;
   
 }
