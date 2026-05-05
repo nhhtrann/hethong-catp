@@ -1,73 +1,107 @@
 // src/pages/Dashboard.jsx
 import React, { useState, useEffect } from 'react';
-import { Card, Col, Row, Statistic, Typography, Spin } from 'antd';
-import { ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
-// Import thư viện biểu đồ Recharts
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
+import { Row, Col, Card, Statistic, Table, Tag, Typography } from 'antd';
+import { AlertOutlined, CheckCircleOutlined, SyncOutlined, FileTextOutlined } from '@ant-design/icons';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
 const { Title } = Typography;
 
 const Dashboard = () => {
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState({ stats: {}, chartData: [] });
+  const [data, setData] = useState([]);
+  const [news, setNews] = useState([]);
 
   useEffect(() => {
-    fetch('http://localhost:3000/reports/stats')
+    // Lấy dữ liệu phản ánh
+    fetch('http://localhost:3000/reports')
       .then(res => res.json())
-      .then(result => {
-        setData(result);
-        setLoading(false);
-      })
-      .catch(err => console.error("Lỗi lấy thống kê:", err));
+      .then(result => Array.isArray(result) && setData(result))
+      .catch(err => console.error(err));
+
+    // Lấy dữ liệu tin tức
+    fetch('http://localhost:3000/news')
+      .then(res => res.json())
+      .then(result => Array.isArray(result) && setNews(result))
+      .catch(err => console.error(err));
   }, []);
 
-  if (loading) return <div style={{ textAlign: 'center', padding: '50px' }}><Spin size="large" /></div>;
+  // Tính toán số liệu
+  const total = data.length;
+  const moi = data.filter(d => d.trangThai === 'Mới').length;
+  const dangXuLy = data.filter(d => d.trangThai === 'Đang xử lý').length;
+  const hoanThanh = data.filter(d => d.trangThai === 'Hoàn thành').length;
+
+  // Dữ liệu biểu đồ tròn
+  const pieData = [
+    { name: 'Mới', value: moi },
+    { name: 'Đang xử lý', value: dangXuLy },
+    { name: 'Hoàn thành', value: hoanThanh }
+  ];
+  const COLORS = ['#ef4444', '#f59e0b', '#10b981'];
+
+  // Cấu hình bảng 5 vụ việc mới nhất
+  const columns = [
+    { title: 'Tiêu đề', dataIndex: 'tieuDe', key: 'tieuDe' },
+    { title: 'Đơn vị xử lý', dataIndex: 'donViXuLy', key: 'donViXuLy', render: (val) => val || 'Chưa phân công' },
+    {
+      title: 'Trạng thái', dataIndex: 'trangThai', key: 'trangThai',
+      render: (trangThai) => {
+        let color = trangThai === 'Mới' ? 'volcano' : (trangThai === 'Đang xử lý' ? 'gold' : 'green');
+        return <Tag color={color}>{trangThai?.toUpperCase()}</Tag>;
+      }
+    }
+  ];
 
   return (
     <div style={{ padding: '24px' }}>
-      <Title level={2}>Tổng quan hệ thống</Title>
+      <Title level={2} style={{ marginBottom: '24px' }}>Tổng quan Hệ thống</Title>
 
-      <Row gutter={16}>
+      <Row gutter={16} style={{ marginBottom: '24px' }}>
         <Col span={6}>
-          <Card bordered={false} className="stat-card">
-            <Statistic title="Tổng phản ánh" value={data.stats.total} valueStyle={{ color: '#1f2937' }} />
+          <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+            <Statistic title="Tổng số vụ việc" value={total} prefix={<FileTextOutlined />} />
           </Card>
         </Col>
         <Col span={6}>
-          <Card bordered={false} className="stat-card">
-            <Statistic title="Mới tiếp nhận" value={data.stats.news} valueStyle={{ color: '#3b82f6' }} />
+          <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+            <Statistic title="Phản ánh Mới (Cần xử lý)" value={moi} valueStyle={{ color: '#ef4444' }} prefix={<AlertOutlined />} />
           </Card>
         </Col>
         <Col span={6}>
-          <Card bordered={false} className="stat-card">
-            <Statistic title="Đang xử lý" value={data.stats.pending} valueStyle={{ color: '#f59e0b' }} />
+          <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+            <Statistic title="Đang xử lý" value={dangXuLy} valueStyle={{ color: '#f59e0b' }} prefix={<SyncOutlined spin />} />
           </Card>
         </Col>
         <Col span={6}>
-          <Card bordered={false} className="stat-card">
-            <Statistic title="Đã hoàn thành" value={data.stats.processed} valueStyle={{ color: '#10b981' }} />
+          <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+            <Statistic title="Đã hoàn thành" value={hoanThanh} valueStyle={{ color: '#10b981' }} prefix={<CheckCircleOutlined />} />
           </Card>
         </Col>
       </Row>
 
-      <Row gutter={16} style={{ marginTop: '24px' }}>
-        <Col span={24}>
-          <Card title="Phân tích tiến độ theo Mảng vi phạm" bordered={false}>
-            <div style={{ width: '100%', height: 400 }}>
+      <Row gutter={24}>
+        <Col span={14}>
+          <Card title="Các vụ việc mới nhất (Top 5)" bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)', height: '100%' }}>
+            {/* Lấy 5 bản ghi mới nhất, lật ngược mảng để bài mới lên đầu */}
+            <Table 
+              columns={columns} 
+              dataSource={[...data].reverse().slice(0, 5)} 
+              pagination={false} 
+              rowKey="id"
+              size="small"
+            />
+          </Card>
+        </Col>
+        <Col span={10}>
+          <Card title="Tỷ lệ Trạng thái" bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)', height: '100%' }}>
+            <div style={{ height: 250 }}>
               <ResponsiveContainer>
-                <BarChart data={data.chartData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="mang" />
-                  <YAxis />
+                <PieChart>
+                  <Pie data={pieData} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                    {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                  </Pie>
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="tongSo" name="Tổng số" fill="#e5e7eb" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="daXuLy" name="Đã xử lý" radius={[4, 4, 0, 0]}>
-                    {data.chartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.mauSac} />
-                    ))}
-                  </Bar>
-                </BarChart>
+                </PieChart>
               </ResponsiveContainer>
             </div>
           </Card>
@@ -76,4 +110,5 @@ const Dashboard = () => {
     </div>
   );
 };
+
 export default Dashboard;

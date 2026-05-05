@@ -1,72 +1,96 @@
-// src/pages/BaoCaoKetQua.jsx
-import React from 'react';
-import { Card, Form, Select, Input, Button, Upload, Typography, message } from 'antd';
-import { InboxOutlined, SendOutlined } from '@ant-design/icons';
+// src/pages/ResultReport.jsx
+import React, { useState, useEffect } from 'react';
+import { Table, Tag, Card, Typography, Input, Space, Button } from 'antd';
+import { SearchOutlined, DownloadOutlined, CheckCircleOutlined } from '@ant-design/icons';
 
 const { Title } = Typography;
-const { Option } = Select;
-const { TextArea } = Input;
-const { Dragger } = Upload;
 
 const ResultReport = () => {
-  const [form] = Form.useForm();
+  const [data, setData] = useState([]);
+  const [searchText, setSearchText] = useState('');
 
-  const handleSubmit = (values) => {
-    // values.hinhAnh sẽ chứa mảng các file đã upload
-    console.log('Dữ liệu gửi đi:', values);
-    message.success('Đã gửi báo cáo thành công lên Ban TN CATP!');
-    form.resetFields(); // Làm sạch form
+  useEffect(() => {
+    fetch('http://localhost:3000/reports')
+      .then(res => res.json())
+      .then(result => {
+        if (Array.isArray(result)) {
+          // CHỈ LỌC NHỮNG VỤ VIỆC ĐÃ HOÀN THÀNH
+          const completedData = result.filter(item => item.trangThai === 'Hoàn thành');
+          
+          const formattedData = completedData.map((item, index) => ({
+            key: item.id?.toString(),
+            stt: index + 1,
+            tieuDe: item.tieuDe,
+            mang: item.mangViPham,
+            donVi: item.donViXuLy || 'N/A',
+            ghiChu: item.ghiChuKetQua || 'Không có ghi chú',
+            ngayGui: item.ngayGui ? new Date(item.ngayGui).toLocaleDateString('vi-VN') : '',
+          }));
+          setData(formattedData);
+        }
+      })
+      .catch(error => console.error('Lỗi API:', error));
+  }, []);
+
+  // Tính năng tìm kiếm trong bảng kết quả
+  const filteredData = data.filter(item => 
+    item.tieuDe?.toLowerCase().includes(searchText.toLowerCase()) ||
+    item.ghiChu?.toLowerCase().includes(searchText.toLowerCase())
+  );
+
+  const handleExport = () => {
+    const headers = ['STT', 'Tiêu đề', 'Mảng vi phạm', 'Đơn vị xử lý', 'Kết quả xử lý', 'Ngày gửi'];
+    const rows = filteredData.map(item => [
+      item.stt, `"${item.tieuDe}"`, `"${item.mang}"`, `"${item.donVi}"`, `"${item.ghiChu}"`, `"${item.ngayGui}"`
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + [headers.join(','), ...rows.map(e => e.join(','))].join("\n");
+    const link = document.createElement("a");
+    link.href = encodeURI(csvContent);
+    link.download = "ResultReport_Completed.csv";
+    link.click();
   };
 
-  // Cấu hình cho khung Kéo thả
-  const uploadProps = {
-    name: 'file',
-    multiple: true,
-    action: 'https://run.mocky.io/v3/435e224c-4440-49c4-ad32-52468c6577b4', // Link test giả lập
-    onChange(info) {
-      const { status } = info.file;
-      if (status === 'done') {
-        message.success(`${info.file.name} tải lên thành công. [Tọa độ ghi nhận: Huế]`);
-      } else if (status === 'error') {
-        message.error(`${info.file.name} tải lên thất bại.`);
-      }
+  const columns = [
+    { title: 'STT', dataIndex: 'stt', key: 'stt', width: 60, align: 'center' },
+    { title: 'Tiêu đề vụ việc', dataIndex: 'tieuDe', key: 'tieuDe', width: '25%' },
+    { title: 'Mảng vi phạm', dataIndex: 'mang', key: 'mang', width: '15%' },
+    { title: 'Đơn vị xử lý', dataIndex: 'donVi', key: 'donVi', width: '15%' },
+    { 
+      title: 'Kết quả xử lý', 
+      dataIndex: 'ghiChu', 
+      key: 'ghiChu',
+      render: (text) => <span style={{ color: '#059669', fontWeight: 500 }}><CheckCircleOutlined /> {text}</span>
     },
-    onDrop(e) {
-      console.log('Dropped files', e.dataTransfer.files);
-    },
-  };
+    { title: 'Thời gian', dataIndex: 'ngayGui', key: 'ngayGui', width: '10%' },
+  ];
 
   return (
-    <div style={{ padding: '24px', maxWidth: '800px', margin: '0 auto' }}>
-      <Title level={2}>Báo cáo Kết quả Xử lý vụ việc</Title>
+    <div style={{ padding: '24px' }}>
+      <Title level={2} style={{ marginTop: 0 }}>Báo cáo Kết quả xử lý</Title>
 
       <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-        <Form form={form} layout="vertical" onFinish={handleSubmit}>
-          
-          <Form.Item name="vuViec" label="Chọn vụ việc cần báo cáo:" rules={[{ required: true, message: 'Vui lòng chọn vụ việc!' }]}>
-            <Select placeholder="-- Chọn vụ việc được giao --">
-              <Option value="PA001">PA001 - Đua xe trái phép tại Lê Lợi</Option>
-              <Option value="PA004">PA004 - Vượt đèn đỏ ngã 6</Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item name="noidung" label="Nội dung xử lý & Số đối tượng liên quan:" rules={[{ required: true, message: 'Vui lòng nhập nội dung xử lý!' }]}>
-            <TextArea rows={4} placeholder="Ví dụ: Đã tiến hành tạm giữ 2 phương tiện và lập biên bản..." />
-          </Form.Item>
-
-          <Form.Item name="hinhAnh" label="Tải lên ảnh minh chứng (Hỗ trợ Kéo/Thả):">
-            <Dragger {...uploadProps}>
-              <p className="ant-upload-drag-icon"><InboxOutlined /></p>
-              <p className="ant-upload-text">Kéo và thả ảnh vào đây hoặc click để chọn file</p>
-              <p className="ant-upload-hint">Hệ thống sẽ tự động trích xuất định vị GPS từ ảnh.</p>
-            </Dragger>
-          </Form.Item>
-
-          <Button type="primary" htmlType="submit" icon={<SendOutlined />} block size="large" style={{ marginTop: 10 }}>
-            Gửi Báo Cáo Lên Ban TN CATP
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
+          <Space>
+            <Input 
+              placeholder="Tìm theo tiêu đề hoặc kết quả..." 
+              prefix={<SearchOutlined />} 
+              style={{ width: 300 }} 
+              onChange={(e) => setSearchText(e.target.value)}
+            />
+            <Tag color="green" style={{ fontSize: '14px', padding: '4px 10px' }}>
+              Trạng thái: Hoàn thành
+            </Tag>
+          </Space>
+          <Button type="primary" icon={<DownloadOutlined />} onClick={handleExport} style={{ backgroundColor: '#10b981' }}>
+            Xuất dữ liệu
           </Button>
+        </div>
 
-        </Form>
+        <Table 
+          columns={columns} 
+          dataSource={filteredData} 
+          bordered={false}
+        />
       </Card>
     </div>
   );
