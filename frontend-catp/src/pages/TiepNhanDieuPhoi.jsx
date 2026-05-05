@@ -32,7 +32,7 @@ const TiepNhanDieuPhoi = () => {
           tieuDe: item.tieuDe,
           mang: item.mangViPham,
           ngayGui: item.ngayGui ? new Date(item.ngayGui).toLocaleDateString('vi-VN') : '',
-          donVi: 'Chưa phân công', // Tạm thời để trống vì chưa nối bảng Units
+          donVi: item.donViXuLy || 'Chưa phân công', // Tạm thời để trống vì chưa nối bảng Units
           trangThai: item.trangThai,
           noiDung: item.noiDung,
           ghiChu: item.ghiChuKetQua,

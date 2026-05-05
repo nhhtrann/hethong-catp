@@ -28,4 +28,14 @@ export class Report {
   
   @CreateDateColumn() // Tự động lấy giờ hệ thống khi insert
   ngayGui: Date;
+
+  @Column({ default: 'Mới' })
+  trangThai: string;
+
+  // THÊM DÒNG NÀY: Lưu tên đơn vị được giao nhiệm vụ
+  @Column({ nullable: true })
+  donViXuLy: string; 
+
+  @Column({ nullable: true })
+  ghiChuKetQua: string;
 }
