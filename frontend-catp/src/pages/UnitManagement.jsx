@@ -7,7 +7,7 @@ import { EditOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 
 const { Title } = Typography;
 
-const QuanLyDonVi = () => {
+const UnitManagement = () => {
   const [data, setData] = useState([]);
   
   // State cho Modal Thêm mới
@@ -217,4 +217,4 @@ const QuanLyDonVi = () => {
   );
 };
 
-export default QuanLyDonVi;
+export default UnitManagement;

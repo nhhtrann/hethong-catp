@@ -5,7 +5,7 @@ import { EditOutlined, DeleteOutlined, FormOutlined, EyeOutlined } from '@ant-de
 
 const { Title, Text } = Typography;
 
-const TuyenTruyen = () => {
+const PublicAwareness = () => {
   const baiViet = [
     { id: 1, tieuDe: "Cảnh báo lừa đảo qua mạng hình thức 'Việc nhẹ lương cao'", ngayDang: "20/04/2026", luotXem: 1250 },
     { id: 2, tieuDe: "Quy định mới về xử phạt nồng độ cồn năm 2026", ngayDang: "18/04/2026", luotXem: 3400 },
@@ -44,4 +44,4 @@ const TuyenTruyen = () => {
   );
 };
 
-export default TuyenTruyen;
+export default PublicAwareness;

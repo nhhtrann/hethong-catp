@@ -7,7 +7,7 @@ const { Option } = Select;
 const { TextArea } = Input;
 const { Dragger } = Upload;
 
-const ChiTietPhanAnh = ({ visible, onClose, data }) => {
+const ReportDetail = ({ visible, onClose, data }) => {
   const [form] = Form.useForm();
   // ĐƯA STATE VÀ EFFECT VÀO TRONG COMPONENT
   const [units, setUnits] = useState([]);
@@ -151,4 +151,4 @@ const ChiTietPhanAnh = ({ visible, onClose, data }) => {
   );
 };
 
-export default ChiTietPhanAnh;
+export default ReportDetail;

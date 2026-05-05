@@ -8,7 +8,7 @@ const { Option } = Select;
 const { TextArea } = Input;
 const { Dragger } = Upload;
 
-const BaoCaoKetQua = () => {
+const ResultReport = () => {
   const [form] = Form.useForm();
 
   const handleSubmit = (values) => {
@@ -72,4 +72,4 @@ const BaoCaoKetQua = () => {
   );
 };
 
-export default BaoCaoKetQua;
+export default ResultReport;

@@ -1,14 +1,14 @@
 // src/pages/TiepNhanDieuPhoi.jsx
 import React, { useState, useEffect } from 'react';
-import ChiTietPhanAnh from '../pages/ChiTietPhanAnh'; // (Chỉnh lại đường dẫn nếu cần)
+import ReportDetail from './ReportDetail'; // (Chỉnh lại đường dẫn nếu cần)
 import { Table, Tag, Space, Button, Input, Select, Card, Typography } from 'antd';
 import { SearchOutlined, EyeOutlined, DownloadOutlined } from '@ant-design/icons';
 
 const { Title } = Typography;
 const { Option } = Select;
 
-const TiepNhanDieuPhoi = () => {
-  // Dữ liệu giả lập (Mock data) chờ API của Phát
+const ReportDispatch = () => {
+  // Dữ liệu giả lập (Mock data) 
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [data, setData] = useState([]);
@@ -189,7 +189,7 @@ const TiepNhanDieuPhoi = () => {
           dataSource={filteredData} 
         />
       </Card>
-      <ChiTietPhanAnh 
+      <ReportDetail 
   visible={isModalVisible} 
   onClose={() => setIsModalVisible(false)} 
   data={selectedRecord} 
@@ -199,4 +199,4 @@ const TiepNhanDieuPhoi = () => {
   );
 };
 
-export default TiepNhanDieuPhoi;
+export default ReportDispatch;

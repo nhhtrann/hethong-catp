@@ -6,12 +6,13 @@ import './App.css';
 
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
-import TiepNhanDieuPhoi from './pages/TiepNhanDieuPhoi';
-import QuanLyDonVi from './pages/QuanLyDonVi';
-import BaoCaoThongKe from './pages/BaoCaoThongKe';
-import TuyenTruyen from './pages/TuyenTruyen';
+import ReportDispatch from './pages/ReportDispatch';
+import UnitManagement from './pages/UnitManagement';
+import StatisticalReport from './pages/StatisticalReport';
+import PublicAwareness from './pages/PublicAwareness';
 import LoginPage from './pages/LoginPage';
-import BaoCaoKetQua from './pages/BaoCaoKetQua';
+import ResultReport from './pages/ResultReport';
+
 
 function App() {
   // Lấy role từ bộ nhớ trình duyệt, nếu không có thì mặc định là null
@@ -63,11 +64,11 @@ function App() {
                 
                 {/* Định nghĩa các đường link tương ứng với Component */}
                 <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/tiep-nhan" element={<TiepNhanDieuPhoi />} />
-                <Route path="/bao-cao-ket-qua" element={<BaoCaoKetQua />} />
-                <Route path="/don-vi" element={<QuanLyDonVi />} />
-                <Route path="/bao-cao" element={<BaoCaoThongKe />} />
-                <Route path="/tuyen-truyen" element={<TuyenTruyen />} />
+                <Route path="/tiep-nhan" element={<ReportDispatch />} />
+                <Route path="/bao-cao-ket-qua" element={<ResultReport />} />
+                <Route path="/don-vi" element={<UnitManagement />} />
+                <Route path="/bao-cao" element={<StatisticalReport />} />
+                <Route path="/tuyen-truyen" element={<PublicAwareness />} />
               </Routes>
             </div>
           </div>

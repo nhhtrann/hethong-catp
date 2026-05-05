@@ -6,7 +6,7 @@ import { FileExcelOutlined, FilePdfOutlined } from '@ant-design/icons';
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-const BaoCaoThongKe = () => {
+const StatisticalReport = () => {
   return (
     <div style={{ padding: '24px' }}>
       <Title level={2}>Báo cáo & Thống kê</Title>
@@ -42,4 +42,4 @@ const BaoCaoThongKe = () => {
   );
 };
 
-export default BaoCaoThongKe;
+export default StatisticalReport;
