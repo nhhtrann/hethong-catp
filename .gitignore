@@ -1,0 +1,11 @@
+# Bỏ qua thư viện của Node.js
+node_modules/
+**/node_modules/
+
+# Bỏ qua các file môi trường (chứa mật khẩu)
+.env
+**/.env
+
+# Bỏ qua thư mục build
+dist/
+**/dist/
