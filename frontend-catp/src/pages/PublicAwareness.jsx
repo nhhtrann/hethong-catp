@@ -9,19 +9,18 @@ import {
 const { Title, Paragraph, Text } = Typography;
 const { TextArea } = Input;
 
+const DEFAULT_IMAGE = "https://placehold.co/600x400/e2e8f0/475569?text=Tuyen+Truyen+CATP";
+
 const PublicAwareness = () => {
   const [newsList, setNewsList] = useState([]);
   
-  // States cho Modal Thêm/Sửa
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [editingNews, setEditingNews] = useState(null); // Lưu thông tin bài viết đang sửa
+  const [editingNews, setEditingNews] = useState(null); 
   const [form] = Form.useForm();
 
-  // States cho Modal Xem chi tiết
   const [isViewModalVisible, setIsViewModalVisible] = useState(false);
   const [viewingNews, setViewingNews] = useState(null);
 
-  // 1. GỌI API LẤY DANH SÁCH BÀI VIẾT
   const fetchNews = () => {
     fetch('http://localhost:3000/news')
       .then(res => res.json())
@@ -39,16 +38,68 @@ const PublicAwareness = () => {
     fetchNews();
   }, []);
 
-  // 2. HÀM XỬ LÝ LƯU (DÙNG CHUNG CHO CẢ THÊM MỚI VÀ SỬA)
+  // 🟢 HÀM XỬ LÝ ẢNH BẰNG "KÉT SẮT" TRÌNH DUYỆT (100% Chống sập Server)
+  const processImageToLocal = (file) => {
+    return new Promise((resolve) => {
+      if (!(file instanceof Blob)) return resolve(DEFAULT_IMAGE);
+      
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 600; // Giữ độ nét ổn định
+          let width = img.width;
+          let height = img.height;
+
+          if (width > MAX_WIDTH) {
+            height = Math.round((height * MAX_WIDTH) / width);
+            width = MAX_WIDTH;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = "#FFFFFF";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Nén ảnh gọn nhẹ
+          const base64Data = canvas.toDataURL('image/jpeg', 0.6);
+          resolve(base64Data);
+        };
+        img.onerror = () => resolve(DEFAULT_IMAGE);
+      };
+      reader.onerror = () => resolve(DEFAULT_IMAGE);
+    });
+  };
+
+  // 🟢 HÀM HIỂN THỊ ẢNH TỪ KÉT SẮT
+  const getImageSrc = (url) => {
+    if (!url) return DEFAULT_IMAGE;
+    if (url.startsWith('local_img_')) {
+      return localStorage.getItem(url) || DEFAULT_IMAGE;
+    }
+    return url;
+  };
+
   const handleSaveNews = async (values) => {
     try {
-      // Xử lý lấy tên file ảnh nếu có upload
-      let tenFileAnh = 'https://via.placeholder.com/400x200.png?text=CATP+News';
+      let finalImageUrl = DEFAULT_IMAGE;
+
       if (values.uploadAnh && values.uploadAnh.length > 0) {
-        // Lấy tên file gốc (Giả sử bạn đã có thư mục uploads ở backend)
-        tenFileAnh = `http://localhost:3000/uploads/${values.uploadAnh[0].name}`;
+        const fileObj = values.uploadAnh[0].originFileObj || values.uploadAnh[0];
+        const base64Data = await processImageToLocal(fileObj);
+        
+        // 🟢 LƯU ẢNH VÀO KÉT SẮT VÀ TẠO CHÌA KHÓA
+        const imageKey = 'local_img_' + Date.now();
+        localStorage.setItem(imageKey, base64Data);
+        finalImageUrl = imageKey; // Gán chìa khóa siêu ngắn để lừa Server
+        
       } else if (editingNews?.hinhAnh) {
-        tenFileAnh = editingNews.hinhAnh; // Nếu đang sửa mà ko up ảnh mới thì giữ nguyên ảnh cũ
+        finalImageUrl = editingNews.hinhAnh; 
       }
 
       const method = editingNews ? 'PATCH' : 'POST';
@@ -56,14 +107,16 @@ const PublicAwareness = () => {
         ? `http://localhost:3000/news/${editingNews.id}` 
         : 'http://localhost:3000/news';
 
+      // Payload gửi đi lúc này chỉ nặng chưa tới 1KB, json-server duyệt 100%
       const response = await fetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tieuDe: values.tieuDe,
           noiDung: values.noiDung,
-          hinhAnh: tenFileAnh, 
+          hinhAnh: finalImageUrl, 
           tacGia: values.tacGia || 'Ban Tiếp nhận CATP',
+          ngayDang: editingNews ? editingNews.ngayDang : new Date().toISOString()
         }),
       });
 
@@ -81,11 +134,14 @@ const PublicAwareness = () => {
     }
   };
 
-  // 3. HÀM XỬ LÝ XÓA BÀI VIẾT
-  const handleDeleteNews = async (id) => {
+  const handleDeleteNews = async (item) => {
     try {
-      const response = await fetch(`http://localhost:3000/news/${id}`, { method: 'DELETE' });
+      const response = await fetch(`http://localhost:3000/news/${item.id}`, { method: 'DELETE' });
       if (response.ok) {
+        // Nếu bài viết có lưu ảnh trong két sắt thì dọn dẹp luôn
+        if (item.hinhAnh && item.hinhAnh.startsWith('local_img_')) {
+          localStorage.removeItem(item.hinhAnh);
+        }
         message.success('Đã xóa bài viết!');
         fetchNews();
       } else {
@@ -96,19 +152,17 @@ const PublicAwareness = () => {
     }
   };
 
-  // 4. HÀM MỞ MODAL SỬA
   const openEditModal = (newsItem) => {
     setEditingNews(newsItem);
     form.setFieldsValue({
       tieuDe: newsItem.tieuDe,
       tacGia: newsItem.tacGia,
       noiDung: newsItem.noiDung,
-      // Không load lại ảnh vào ô Upload để tránh lỗi, người dùng có thể up ảnh mới đè lên
+      uploadAnh: [] 
     });
     setIsModalVisible(true);
   };
 
-  // 5. HÀM MỞ MODAL XEM CHI TIẾT
   const openViewModal = (newsItem) => {
     setViewingNews(newsItem);
     setIsViewModalVisible(true);
@@ -122,7 +176,7 @@ const PublicAwareness = () => {
             <ReadOutlined style={{ marginRight: '10px', color: '#3b82f6' }} />
             Tuyên truyền & Cảnh báo
           </Title>
-          <Text type="secondary">Cập nhật tin tức an ninh trật tự, tuyên truyền pháp luật cho học sinh.</Text>
+          <Text type="secondary">Cập nhật tin tức an ninh trật tự, tuyên truyền pháp luật cho nhân dân.</Text>
         </div>
         <Button 
           type="primary" 
@@ -133,7 +187,7 @@ const PublicAwareness = () => {
             form.resetFields();
             setIsModalVisible(true);
           }}
-          style={{ backgroundColor: '#10b981', border: 'none' }}
+          style={{ backgroundColor: '#10b981', border: 'none', fontWeight: 500 }}
         >
           Đăng tin mới
         </Button>
@@ -144,24 +198,30 @@ const PublicAwareness = () => {
           <Col xs={24} sm={12} md={8} lg={8} key={item.id}>
             <Card
               hoverable
-              cover={<img alt={item.tieuDe} src={item.hinhAnh} style={{ height: '200px', objectFit: 'cover' }} />}
+              cover={
+                <img 
+                  alt={item.tieuDe} 
+                  src={getImageSrc(item.hinhAnh)} // 🟢 Dùng hàm giải mã Két sắt
+                  onError={(e) => { e.target.onerror = null; e.target.src = DEFAULT_IMAGE; }}
+                  style={{ height: '200px', objectFit: 'cover' }} 
+                />
+              }
               style={{ height: '100%', display: 'flex', flexDirection: 'column', borderRadius: '12px', overflow: 'hidden' }}
               bodyStyle={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}
-              // THANH CÔNG CỤ XEM - SỬA - XÓA Ở ĐÁY CARD
               actions={[
                 <EyeOutlined key="view" onClick={() => openViewModal(item)} style={{ color: '#1890ff' }} />,
                 <EditOutlined key="edit" onClick={() => openEditModal(item)} style={{ color: '#faad14' }} />,
                 <Popconfirm 
                   title="Bạn có chắc chắn muốn xóa tin này?" 
-                  onConfirm={() => handleDeleteNews(item.id)}
+                  onConfirm={() => handleDeleteNews(item)}
                   okText="Xóa" cancelText="Hủy"
                 >
                   <DeleteOutlined key="delete" style={{ color: '#ff4d4f' }} />
                 </Popconfirm>,
               ]}
             >
-              <div style={{ marginBottom: '12px' }}><Tag color="blue">Tin tức</Tag></div>
-              <Title level={5} style={{ marginBottom: '8px', flexGrow: 0 }}>{item.tieuDe}</Title>
+              <div style={{ marginBottom: '12px' }}><Tag color="blue" style={{ border: 'none' }}>Tin tức</Tag></div>
+              <Title level={5} style={{ marginBottom: '8px', flexGrow: 0, fontWeight: 700, color: '#1f2937' }}>{item.tieuDe}</Title>
               <Paragraph type="secondary" ellipsis={{ rows: 3 }} style={{ flexGrow: 1 }}>{item.noiDung}</Paragraph>
               <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#8c8c8c' }}>
                 <span><ClockCircleOutlined /> {item.ngayDang ? new Date(item.ngayDang).toLocaleDateString('vi-VN') : 'Mới cập nhật'}</span>
@@ -172,7 +232,6 @@ const PublicAwareness = () => {
         ))}
       </Row>
 
-      {/* MODAL THÊM / SỬA BÀI VIẾT */}
       <Modal
         title={<Title level={4}>{editingNews ? 'Cập nhật bài viết' : 'Đăng bài tuyên truyền mới'}</Title>}
         open={isModalVisible}
@@ -195,7 +254,6 @@ const PublicAwareness = () => {
               </Form.Item>
             </Col>
             <Col span={12}>
-              {/* NÚT UPLOAD ẢNH XỊN XÒ */}
               <Form.Item 
                 name="uploadAnh" 
                 label="Tải ảnh lên (Tùy chọn)" 
@@ -215,7 +273,6 @@ const PublicAwareness = () => {
         </Form>
       </Modal>
 
-      {/* MODAL XEM CHI TIẾT BÀI VIẾT DÀNH CHO NGƯỜI ĐỌC */}
       <Modal
         open={isViewModalVisible}
         onCancel={() => setIsViewModalVisible(false)}
@@ -225,26 +282,26 @@ const PublicAwareness = () => {
       >
         {viewingNews && (
           <div>
-            <Title level={3}>{viewingNews.tieuDe}</Title>
-            <div style={{ marginBottom: '20px', color: '#8c8c8c' }}>
+            <Title level={3} style={{ color: '#1f2937' }}>{viewingNews.tieuDe}</Title>
+            <div style={{ marginBottom: '20px', color: '#64748b', fontWeight: 500 }}>
               <Space size="large">
                 <span><UserOutlined /> Đăng bởi: {viewingNews.tacGia}</span>
-                <span><ClockCircleOutlined /> Thời gian: {viewingNews.ngayDang ? new Date(viewingNews.ngayDang).toLocaleDateString('vi-VN') : ''}</span>
+                <span><ClockCircleOutlined /> Thời gian: {viewingNews.ngayDang ? new Date(viewingNews.ngayDang).toLocaleDateString('vi-VN') : 'Mới cập nhật'}</span>
               </Space>
             </div>
+            
             <img 
-              src={viewingNews.hinhAnh} 
+              src={getImageSrc(viewingNews.hinhAnh)} // 🟢 Dùng hàm giải mã Két sắt
+              onError={(e) => { e.target.onerror = null; e.target.src = DEFAULT_IMAGE; }}
               alt="Ảnh minh họa" 
               style={{ width: '100%', maxHeight: '400px', objectFit: 'cover', borderRadius: '8px', marginBottom: '20px' }} 
             />
-            {/* Thuộc tính whiteSpace giúp giữ nguyên các dòng xuống hàng (Enter) khi Admin gõ */}
-            <Paragraph style={{ fontSize: '16px', lineHeight: '1.8', whiteSpace: 'pre-wrap' }}>
+            <Paragraph style={{ fontSize: '16px', lineHeight: '1.8', whiteSpace: 'pre-wrap', color: '#334155' }}>
               {viewingNews.noiDung}
             </Paragraph>
           </div>
         )}
       </Modal>
-
     </div>
   );
 };

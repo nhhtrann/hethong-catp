@@ -1,18 +1,29 @@
-// src/pages/StatisticalReport.jsx
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Statistic, DatePicker, Space, Button, Table, Typography, message } from 'antd';
-import { DownloadOutlined, FilterOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Statistic, DatePicker, Space, Button, Table, Typography, message, Tag } from 'antd';
+import { DownloadOutlined, FilterOutlined, PieChartOutlined, BarChartOutlined, TableOutlined } from '@ant-design/icons';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import * as XLSX from 'xlsx';
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
 
-const StatisticalReport = () => {
-  const [data, setData] = useState([]); // Dữ liệu gốc
-  const [filteredData, setFilteredData] = useState([]); // Dữ liệu sau khi lọc (Dùng để vẽ biểu đồ)
-  const [selectedDates, setSelectedDates] = useState(null); // Lưu trữ ngày người dùng chọn
+// 🟢 CẤU HÌNH MÀU SẮC ĐỒNG BỘ TOÀN HỆ THỐNG
+const STATUS_COLORS = {
+  'HOÀN THÀNH': '#10b981', 
+  'ĐANG XỬ LÝ': '#f59e0b', 
+  'MỚI': '#ef4444',        
+  'CHƯA XỬ LÝ': '#ef4444',
+  'ĐÃ XỬ LÝ': '#10b981',
+  'DEFAULT': '#64748b'    
+};
 
-  // 1. GỌI API LẤY DỮ LIỆU
+const PIE_COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4', '#10b981', '#f59e0b'];
+
+const StatisticalReport = () => {
+  const [data, setData] = useState([]); 
+  const [filteredData, setFilteredData] = useState([]); 
+  const [selectedDates, setSelectedDates] = useState(null); 
+
   useEffect(() => {
     fetch('http://localhost:3000/reports')
       .then(res => res.json())
@@ -24,137 +35,136 @@ const StatisticalReport = () => {
             tieuDe: item.tieuDe,
             mang: item.mangViPham,
             ngayGui: item.ngayGui ? new Date(item.ngayGui).toLocaleDateString('vi-VN') : '',
-            ngayGuiGoc: item.ngayGui ? new Date(item.ngayGui) : null, // THÊM DÒNG NÀY ĐỂ MÁY TÍNH DỄ LỌC NGÀY
-            trangThai: item.trangThai,
+            ngayGuiGoc: item.ngayGui ? new Date(item.ngayGui) : null,
+            trangThai: item.trangThai || 'Mới',
           }));
           setData(formattedData);
-          setFilteredData(formattedData); // Mặc định hiển thị tất cả
+          setFilteredData(formattedData); 
         }
       })
       .catch(err => console.error("Lỗi lấy dữ liệu:", err));
   }, []);
 
-  // 2. HÀM XỬ LÝ LỌC THEO NGÀY
   const handleFilter = () => {
     if (!selectedDates || selectedDates.length === 0) {
-      setFilteredData(data); // Nếu không chọn ngày mà bấm lọc -> Hiện tất cả
+      setFilteredData(data); 
       message.info('Đang hiển thị toàn bộ dữ liệu');
       return;
     }
-
-    // Lấy ngày bắt đầu và ngày kết thúc từ RangePicker
     const startDate = selectedDates[0].toDate();
-    startDate.setHours(0, 0, 0, 0); // Lấy từ 00:00:00 của ngày bắt đầu
-
+    startDate.setHours(0, 0, 0, 0); 
     const endDate = selectedDates[1].toDate();
-    endDate.setHours(23, 59, 59, 999); // Lấy đến 23:59:59 của ngày kết thúc
+    endDate.setHours(23, 59, 59, 999); 
 
-    // Tiến hành lọc dữ liệu
     const newData = data.filter(item => {
       if (!item.ngayGuiGoc) return false;
       return item.ngayGuiGoc >= startDate && item.ngayGuiGoc <= endDate;
     });
-
     setFilteredData(newData);
-    message.success(`Đã lọc ra ${newData.length} vụ việc trong khoảng thời gian này`);
+    message.success(`Đã lọc ra ${newData.length} vụ việc`);
   };
 
-  // ==========================================
-  // LƯU Ý: TOÀN BỘ CODE TÍNH TOÁN DƯỚI ĐÂY PHẢI ĐỔI TỪ `data` SANG `filteredData`
-  // ==========================================
+  const handleExport = () => {
+    const exportData = filteredData.map(item => ({
+      'STT': item.stt,
+      'Tiêu đề': item.tieuDe,
+      'Mảng vi phạm': item.mang,
+      'Trạng thái': item.trangThai?.toUpperCase(),
+      'Ngày gửi': item.ngayGui
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    worksheet['!cols'] = [{ wch: 5 }, { wch: 50 }, { wch: 20 }, { wch: 15 }, { wch: 15 }];
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Thong_Ke");
+    XLSX.writeFile(workbook, `Bao_Cao_Thong_Ke_${new Date().getTime()}.xlsx`);
+  };
 
-  // 3. TÍNH TOÁN DỮ LIỆU CHO CÁC THẺ THỐNG KÊ
+  // Logic tính toán biểu đồ
   const totalReports = filteredData.length;
-  const completedReports = filteredData.filter(item => item.trangThai === 'Hoàn thành').length;
-  const processingReports = filteredData.filter(item => item.trangThai === 'Đang xử lý').length;
-  const newReports = filteredData.filter(item => item.trangThai === 'Mới').length;
+  const completed = filteredData.filter(i => i.trangThai.toUpperCase().includes('HOÀN') || i.trangThai.toUpperCase().includes('ĐÃ')).length;
+  const processing = filteredData.filter(i => i.trangThai.toUpperCase().includes('ĐANG')).length;
+  const newly = totalReports - completed - processing;
 
-  // 4. TÍNH TOÁN DỮ LIỆU CHO BIỂU ĐỒ TRÒN
   const mangStats = filteredData.reduce((acc, curr) => {
     acc[curr.mang] = (acc[curr.mang] || 0) + 1;
     return acc;
   }, {});
   const pieData = Object.keys(mangStats).map(key => ({ name: key, value: mangStats[key] }));
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8b5cf6'];
 
-  // 5. TÍNH TOÁN DỮ LIỆU CHO BIỂU ĐỒ CỘT
-  const trangThaiStats = filteredData.reduce((acc, curr) => {
-    acc[curr.trangThai] = (acc[curr.trangThai] || 0) + 1;
-    return acc;
-  }, {});
-  const barData = Object.keys(trangThaiStats).map(key => ({ name: key, soLuong: trangThaiStats[key] }));
-
-  // Cấu hình cột cho bảng chi tiết
-  const columns = [
-    { title: 'STT', dataIndex: 'stt', width: 60, align: 'center' },
-    { title: 'Tiêu đề', dataIndex: 'tieuDe' },
-    { title: 'Mảng vi phạm', dataIndex: 'mang' },
-    { title: 'Trạng thái', dataIndex: 'trangThai' },
-    { title: 'Ngày gửi', dataIndex: 'ngayGui' },
+  const barData = [
+    { name: 'Mới', value: newly },
+    { name: 'Đang xử lý', value: processing },
+    { name: 'Đã xử lý', value: completed },
   ];
 
-  const handleExport = () => {
-    const headers = ['STT', 'Tiêu đề', 'Mảng vi phạm', 'Trạng thái', 'Ngày gửi'];
-    const rows = filteredData.map(item => [item.stt, `"${item.tieuDe}"`, `"${item.mang}"`, `"${item.trangThai}"`, `"${item.ngayGui}"`]);
-    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + [headers.join(','), ...rows.map(e => e.join(','))].join("\n");
-    const link = document.createElement("a");
-    link.href = encodeURI(csvContent);
-    link.download = "StatisticalReport_FilteredByDate.csv";
-    link.click();
-  };
+  const columns = [
+    { title: 'STT', dataIndex: 'stt', width: 70, align: 'center', render: (t) => <span style={{color: '#94a3b8'}}>{t}</span> },
+    { title: 'Tiêu đề vụ việc', dataIndex: 'tieuDe', render: (t) => <Text strong>{t}</Text> },
+    { title: 'Mảng vi phạm', dataIndex: 'mang', width: 180, render: (t) => <Tag color="blue">{t}</Tag> },
+    { 
+      title: 'Trạng thái', 
+      dataIndex: 'trangThai', 
+      width: 150, 
+      align: 'center',
+      render: (val) => {
+        const text = val?.toUpperCase();
+        let color = STATUS_COLORS['DEFAULT'];
+        if (text.includes('ĐÃ') || text.includes('HOÀN')) color = STATUS_COLORS['HOÀN THÀNH'];
+        else if (text.includes('ĐANG')) color = STATUS_COLORS['ĐANG XỬ LÝ'];
+        else if (text.includes('MỚI') || text.includes('CHƯA')) color = STATUS_COLORS['MỚI'];
+        
+        return (
+          <div style={{ backgroundColor: color, color: '#fff', padding: '4px 0', borderRadius: '4px', fontWeight: '700', fontSize: '11px', width: '100px', margin: '0 auto' }}>
+            {text}
+          </div>
+        );
+      }
+    },
+    { title: 'Ngày gửi', dataIndex: 'ngayGui', width: 130 }
+  ];
 
   return (
     <div style={{ padding: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <Title level={2} style={{ margin: 0 }}>Báo cáo & Thống kê</Title>
+        <Title level={2} style={{ margin: 0, fontWeight: 800 }}>Báo cáo & Thống kê</Title>
         <Space>
-          <RangePicker 
-            format="DD/MM/YYYY" 
-            placeholder={['Từ ngày', 'Đến ngày']} 
-            onChange={(dates) => setSelectedDates(dates)} // Lấy ngày người dùng chọn
-          />
+          <RangePicker format="DD/MM/YYYY" onChange={(dates) => setSelectedDates(dates)} />
           <Button type="primary" icon={<FilterOutlined />} onClick={handleFilter}>Lọc</Button>
-          <Button icon={<DownloadOutlined />} onClick={handleExport} style={{ backgroundColor: '#10b981', color: 'white', border: 'none' }}>
-            Xuất Báo Cáo
-          </Button>
+          <Button icon={<DownloadOutlined />} onClick={handleExport} style={{ backgroundColor: '#10b981', color: 'white', border: 'none' }}>Xuất Excel</Button>
         </Space>
       </div>
 
-      {/* HÀNG 1: CÁC THẺ SỐ LIỆU TỔNG QUAN */}
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={6}>
-          <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)', borderLeft: '4px solid #3b82f6' }}>
-            <Statistic title="Tổng số phản ánh" value={totalReports} valueStyle={{ color: '#1f2937', fontWeight: 'bold' }} />
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} sm={12} md={6}>
+          <Card bordered={false} className="stat-card" style={{ borderLeft: '5px solid #3b82f6' }}>
+            <Statistic title="Tổng số phản ánh" value={totalReports} valueStyle={{ fontWeight: 800 }} />
           </Card>
         </Col>
-        <Col span={6}>
-          <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)', borderLeft: '4px solid #10b981' }}>
-            <Statistic title="Đã hoàn thành" value={completedReports} valueStyle={{ color: '#10b981', fontWeight: 'bold' }} />
+        <Col xs={24} sm={12} md={6}>
+          <Card bordered={false} className="stat-card" style={{ borderLeft: `5px solid ${STATUS_COLORS['HOÀN THÀNH']}` }}>
+            <Statistic title="Đã hoàn thành" value={completed} valueStyle={{ color: STATUS_COLORS['HOÀN THÀNH'], fontWeight: 800 }} />
           </Card>
         </Col>
-        <Col span={6}>
-          <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)', borderLeft: '4px solid #f59e0b' }}>
-            <Statistic title="Đang xử lý" value={processingReports} valueStyle={{ color: '#f59e0b', fontWeight: 'bold' }} />
+        <Col xs={24} sm={12} md={6}>
+          <Card bordered={false} className="stat-card" style={{ borderLeft: `5px solid ${STATUS_COLORS['ĐANG XỬ LÝ']}` }}>
+            <Statistic title="Đang xử lý" value={processing} valueStyle={{ color: STATUS_COLORS['ĐANG XỬ LÝ'], fontWeight: 800 }} />
           </Card>
         </Col>
-        <Col span={6}>
-          <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)', borderLeft: '4px solid #ef4444' }}>
-            <Statistic title="Phản ánh mới" value={newReports} valueStyle={{ color: '#ef4444', fontWeight: 'bold' }} />
+        <Col xs={24} sm={12} md={6}>
+          <Card bordered={false} className="stat-card" style={{ borderLeft: `5px solid ${STATUS_COLORS['MỚI']}` }}>
+            <Statistic title="Phản ánh mới" value={newly} valueStyle={{ color: STATUS_COLORS['MỚI'], fontWeight: 800 }} />
           </Card>
         </Col>
       </Row>
 
-      {/* HÀNG 2: BIỂU ĐỒ TRỰC QUAN */}
-      <Row gutter={24} style={{ marginBottom: 24 }}>
-        <Col span={12}>
-          <Card title="Tỷ lệ phản ánh theo Mảng vi phạm" bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+      <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
+        <Col xs={24} lg={12}>
+          <Card title={<span><PieChartOutlined /> Tỷ lệ theo Mảng vi phạm</span>} bordered={false} className="chart-card">
             <div style={{ width: '100%', height: 300 }}>
-              <ResponsiveContainer>
+              <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                 <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" outerRadius={100} fill="#8884d8" dataKey="value" label>
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
+                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                    {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
                   </Pie>
                   <Tooltip />
                   <Legend />
@@ -163,17 +173,23 @@ const StatisticalReport = () => {
             </div>
           </Card>
         </Col>
-
-        <Col span={12}>
-          <Card title="Thống kê theo Trạng thái xử lý" bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+        <Col xs={24} lg={12}>
+          <Card title={<span><BarChartOutlined /> Thống kê Trạng thái</span>} bordered={false} className="chart-card">
             <div style={{ width: '100%', height: 300 }}>
-              <ResponsiveContainer>
-                <BarChart data={barData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="soLuong" name="Số lượng" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                <BarChart data={barData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                  <YAxis axisLine={false} tickLine={false} />
+                  <Tooltip cursor={{fill: '#f8fafc'}} />
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={40}>
+                    {barData.map((entry, index) => {
+                      let color = STATUS_COLORS['MỚI'];
+                      if (entry.name === 'Đang xử lý') color = STATUS_COLORS['ĐANG XỬ LÝ'];
+                      if (entry.name === 'Đã xử lý') color = STATUS_COLORS['HOÀN THÀNH'];
+                      return <Cell key={`cell-${index}`} fill={color} />;
+                    })}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -181,9 +197,8 @@ const StatisticalReport = () => {
         </Col>
       </Row>
 
-      {/* HÀNG 3: BẢNG DỮ LIỆU CHI TIẾT */}
-      <Card title="Danh sách dữ liệu chi tiết" bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-        <Table columns={columns} dataSource={filteredData} pagination={{ pageSize: 5 }} />
+      <Card title={<span><TableOutlined /> Danh sách dữ liệu chi tiết</span>} bordered={false} className="chart-card">
+        <Table columns={columns} dataSource={filteredData} pagination={{ pageSize: 5 }} scroll={{ x: 'max-content' }} />
       </Card>
     </div>
   );

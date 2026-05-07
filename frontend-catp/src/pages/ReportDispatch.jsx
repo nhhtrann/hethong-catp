@@ -1,9 +1,8 @@
 // src/pages/ReportDispatch.jsx
 import React, { useState, useEffect } from 'react';
-import { Table, Tag, Card, Typography, Input, Space, Button, Select } from 'antd'; // Đã thêm Select
-import { SearchOutlined, EyeOutlined, DownloadOutlined } from '@ant-design/icons'; // Đã thêm DownloadOutlined
-
-// IMPORT MODAL DÙNG CHUNG VÀO ĐÂY (Lưu ý đường dẫn thư mục components)
+import { Table, Card, Typography, Input, Space, Button, Select } from 'antd'; 
+import { SearchOutlined, EyeOutlined, DownloadOutlined } from '@ant-design/icons'; 
+import * as XLSX from 'xlsx';
 import ReportDetail from '../pages/ReportDetail';
 
 const { Title } = Typography;
@@ -15,7 +14,6 @@ const ReportDispatch = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
   
-  // Các biến lưu điều kiện lọc
   const [filterMang, setFilterMang] = useState(null);
   const [filterTrangThai, setFilterTrangThai] = useState(null);
 
@@ -35,7 +33,7 @@ const ReportDispatch = () => {
             noiDung: item.noiDung,
             ghiChu: item.ghiChuKetQua,
             anhKetQua: item.anhKetQua,
-            anhKiemChung : item.anhKiemChung, // Thêm trường ảnh chứng cứ nếu có
+            anhKiemChung : item.anhKiemChung, 
             ngayGui: item.ngayGui ? new Date(item.ngayGui).toLocaleDateString('vi-VN') : '',
           }));
           setData(formattedData);
@@ -45,11 +43,9 @@ const ReportDispatch = () => {
       .catch(error => console.error('Lỗi khi gọi API:', error));
   }, []);
 
-  // Tự động chạy mỗi khi từ khóa tìm kiếm hoặc bộ lọc thay đổi
   useEffect(() => {
     let result = data;
 
-    // 1. Lọc theo chữ gõ vào (Tìm trong Tiêu đề hoặc Nội dung)
     if (searchText) {
       const lowercasedFilter = searchText.toLowerCase();
       result = result.filter(item => 
@@ -58,12 +54,10 @@ const ReportDispatch = () => {
       );
     }
 
-    // 2. Lọc theo Mảng vi phạm
     if (filterMang && filterMang !== 'Tất cả') {
       result = result.filter(item => item.mang === filterMang);
     }
 
-    // 3. Lọc theo Trạng thái
     if (filterTrangThai && filterTrangThai !== 'Tất cả') {
       result = result.filter(item => item.trangThai === filterTrangThai);
     }
@@ -71,66 +65,101 @@ const ReportDispatch = () => {
     setFilteredData(result);
   }, [searchText, filterMang, filterTrangThai, data]);
 
-  // Hàm xuất dữ liệu ra file CSV
   const handleExport = () => {
-    // Tạo dòng tiêu đề
-    const headers = ['STT', 'Tiêu đề', 'Mảng vi phạm', 'Ngày gửi', 'Đơn vị xử lý', 'Trạng thái'];
-    
-    // Tạo các dòng dữ liệu
-    const rows = filteredData.map((item, index) => [
-      index + 1,
-      `"${item.tieuDe}"`, 
-      `"${item.mang}"`,
-      `"${item.ngayGui}"`,
-      `"${item.donViXuLy}"`, // Đã sửa từ item.donVi thành item.donViXuLy
-      `"${item.trangThai}"`
-    ]);
+    const exportData = filteredData.map((item, index) => ({
+      'STT': index + 1,
+      'Tiêu đề vụ việc': item.tieuDe,
+      'Mảng vi phạm': item.mang,
+      'Ngày gửi': item.ngayGui,
+      'Đơn vị xử lý': item.donViXuLy ? `Đơn vị số ${item.donViXuLy}` : 'Chưa phân công',
+      'Trạng thái': item.trangThai?.toUpperCase()
+    }));
 
-    // Ghép lại thành cấu trúc file CSV có hỗ trợ tiếng Việt (UTF-8 BOM)
-    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" 
-      + [headers.join(','), ...rows.map(e => e.join(','))].join("\n");
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const columnWidths = [{ wch: 5 }, { wch: 45 }, { wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 15 }];
+    worksheet['!cols'] = columnWidths;
 
-    // Tạo link tải ảo và kích hoạt nó
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "DanhSachPhanAnh.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Danh_Sach_Phan_Anh");
+    XLSX.writeFile(workbook, "Bao_Cao_CATP.xlsx");
   };
 
   const columns = [
     { title: 'STT', dataIndex: 'stt', key: 'stt', width: 60, align: 'center' },
-    { title: 'Tiêu đề vụ việc', dataIndex: 'tieuDe', key: 'tieuDe', width: '25%' },
+    { 
+      title: 'Tiêu đề vụ việc', 
+      dataIndex: 'tieuDe', 
+      key: 'tieuDe', 
+      width: '30%',
+      render: (text) => <span style={{ fontWeight: 600, color: '#1f2937' }}>{text}</span>
+    },
     { title: 'Mảng vi phạm', dataIndex: 'mang', key: 'mang', width: '15%' },
+    { title: 'Ngày gửi', dataIndex: 'ngayGui', key: 'ngayGui', width: '12%' },
     { 
       title: 'Đơn vị xử lý', 
       dataIndex: 'donViXuLy', 
       key: 'donViXuLy',
-      render: (val) => val ? <Tag color="purple">{val}</Tag> : <Tag color="default">Chưa phân công</Tag>
+      // 🟢 Ép buộc dùng thẻ div và CSS gốc để lên màu chuẩn
+      render: (val) => val ? (
+        <div style={{ 
+          backgroundColor: '#f1f5f9', 
+          color: '#334155', 
+          padding: '4px 10px', 
+          borderRadius: '4px', 
+          fontWeight: 600, 
+          display: 'inline-block' 
+        }}>
+          {val}
+        </div>
+      ) : <span style={{ color: '#9ca3af' }}>Chưa phân công</span>
     },
     {
       title: 'Trạng thái',
       key: 'trangThai',
       dataIndex: 'trangThai',
       render: (trangThai) => {
-        let color = trangThai === 'Mới' ? 'volcano' : (trangThai === 'Đang xử lý' ? 'gold' : (trangThai === 'Chờ duyệt' ? 'blue' : 'green'));
-        return <Tag color={color}>{trangThai?.toUpperCase()}</Tag>;
+        let bgColor = '#e5e7eb'; 
+        let textColor = '#374151'; 
+        
+        let text = trangThai ? trangThai.normalize('NFC').toUpperCase().trim() : '';
+        
+        // 🟢 Cấu hình màu nền đặc (Solid Background)
+        if (text.includes('MỚI') || text.includes('CHƯA')) { bgColor = '#f97316'; textColor = '#fff'; } 
+        else if (text.includes('ĐANG')) { bgColor = '#3b82f6'; textColor = '#fff'; } 
+        else if (text.includes('ĐÃ') || text.includes('HOÀN')) { bgColor = '#10b981'; textColor = '#fff'; } 
+        else if (text.includes('CHỜ')) { bgColor = '#8b5cf6'; textColor = '#fff'; } 
+        
+        // 🟢 Ép buộc dùng CSS gốc, từ chối thư viện Ant Design can thiệp
+        return (
+          <div style={{ 
+            backgroundColor: bgColor, 
+            color: textColor, 
+            padding: '4px 12px', 
+            borderRadius: '4px', 
+            fontWeight: '600',
+            fontSize: '12px',
+            display: 'inline-block',
+            textAlign: 'center',
+            minWidth: '90px'
+          }}>
+            {text}
+          </div>
+        );
       },
     },
     {
       title: 'Thao tác',
       key: 'action',
+      align: 'center',
       render: (_, record) => (
         <Button 
           type="primary" 
           icon={<EyeOutlined />} 
-          size="small"
           onClick={() => {
             setSelectedRecord(record);
             setIsModalVisible(true);
           }}
+          style={{ padding: '0 12px', fontSize: '13px' }}
         >
           Điều phối
         </Button>
@@ -140,27 +169,13 @@ const ReportDispatch = () => {
 
   return (
     <div style={{ padding: '24px' }}>
-      <Title level={2} style={{ marginTop: 0 }}>Tiếp nhận & Điều phối phản ánh</Title>
+      <Title level={2} style={{ marginTop: 0, fontWeight: 700, color: '#1e293b' }}>Tiếp nhận & Điều phối phản ánh</Title>
 
-      <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+      <Card bordered={false} style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
         
-        {/* THANH CÔNG CỤ TÌM KIẾM & LỌC */}
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          marginBottom: 20,
-          flexWrap: 'wrap', 
-          gap: '10px'
-        }}>
-          {/* Nhóm bên trái: Tìm kiếm và Lọc */}
-          <Space wrap>
-            <Input 
-              placeholder="Tìm kiếm tiêu đề, nội dung..." 
-              prefix={<SearchOutlined />} 
-              style={{ width: 250 }}
-              onChange={(e) => setSearchText(e.target.value)}
-            />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: '15px' }}>
+          <Space wrap style={{ flex: 1 }}>
+            <Input placeholder="Tìm kiếm tiêu đề, nội dung..." prefix={<SearchOutlined />} style={{ width: '100%', minWidth: 200, maxWidth: 250 }} onChange={(e) => setSearchText(e.target.value)} />
             <Select defaultValue="Tất cả" style={{ width: 140 }} onChange={(value) => setFilterMang(value)}>
               <Select.Option value="Tất cả">Tất cả mảng</Select.Option>
               <Select.Option value="Giao thông">Giao thông</Select.Option>
@@ -178,20 +193,20 @@ const ReportDispatch = () => {
             </Select>
           </Space>
 
-          {/* Nhóm bên phải: Nút Xuất dữ liệu */}
           <Button type="primary" icon={<DownloadOutlined />} onClick={handleExport}>
             Xuất dữ liệu
           </Button>
         </div>
 
-        {/* BẢNG DỮ LIỆU */}
         <Table 
           columns={columns} 
           dataSource={filteredData} 
+          scroll={{ x: 800 }} 
+          size="middle" 
+          style={{ border: '1px solid #f0f0f0', borderRadius: '4px' }}
         />
       </Card>
       
-      {/* GỌI MODAL DÙNG CHUNG VỚI QUYỀN ADMIN */}
       <ReportDetail 
         visible={isModalVisible} 
         onClose={() => setIsModalVisible(false)} 

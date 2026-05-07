@@ -1,4 +1,4 @@
-// src/pages/Dashboard.jsx
+
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Statistic, Table, Tag, Typography } from 'antd';
 import { AlertOutlined, CheckCircleOutlined, SyncOutlined, FileTextOutlined } from '@ant-design/icons';
@@ -11,13 +11,13 @@ const Dashboard = () => {
   const [news, setNews] = useState([]);
 
   useEffect(() => {
-    // Lấy dữ liệu phản ánh
+   
     fetch('http://localhost:3000/reports')
       .then(res => res.json())
       .then(result => Array.isArray(result) && setData(result))
       .catch(err => console.error(err));
 
-    // Lấy dữ liệu tin tức
+   
     fetch('http://localhost:3000/news')
       .then(res => res.json())
       .then(result => Array.isArray(result) && setNews(result))
@@ -55,43 +55,51 @@ const Dashboard = () => {
     <div style={{ padding: '24px' }}>
       <Title level={2} style={{ marginBottom: '24px' }}>Tổng quan Hệ thống</Title>
 
-      <Row gutter={16} style={{ marginBottom: '24px' }}>
-        <Col span={6}>
+      <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+        {}
+        <Col xs={24} sm={12} md={6}>
           <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
             <Statistic title="Tổng số vụ việc" value={total} prefix={<FileTextOutlined />} />
           </Card>
         </Col>
-        <Col span={6}>
+        <Col xs={24} sm={12} md={6}>
           <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
             <Statistic title="Phản ánh Mới (Cần xử lý)" value={moi} valueStyle={{ color: '#ef4444' }} prefix={<AlertOutlined />} />
           </Card>
         </Col>
-        <Col span={6}>
+        <Col xs={24} sm={12} md={6}>
           <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
             <Statistic title="Đang xử lý" value={dangXuLy} valueStyle={{ color: '#f59e0b' }} prefix={<SyncOutlined spin />} />
           </Card>
         </Col>
-        <Col span={6}>
+        <Col xs={24} sm={12} md={6}>
           <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
             <Statistic title="Đã hoàn thành" value={hoanThanh} valueStyle={{ color: '#10b981' }} prefix={<CheckCircleOutlined />} />
           </Card>
         </Col>
       </Row>
 
-      <Row gutter={24}>
-        <Col span={14}>
+      {}
+      <Row gutter={[24, 24]}>
+        {}
+        <Col xs={24} lg={14}>
           <Card title="Các vụ việc mới nhất (Top 5)" bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)', height: '100%' }}>
-            {/* Lấy 5 bản ghi mới nhất, lật ngược mảng để bài mới lên đầu */}
             <Table 
               columns={columns} 
               dataSource={[...data].reverse().slice(0, 5)} 
+              
+            
+              scroll={{ x: 'max-content' }} 
+              
               pagination={false} 
               rowKey="id"
               size="small"
             />
           </Card>
         </Col>
-        <Col span={10}>
+        
+        {}
+        <Col xs={24} lg={10}>
           <Card title="Tỷ lệ Trạng thái" bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)', height: '100%' }}>
             <div style={{ height: 250 }}>
               <ResponsiveContainer>
