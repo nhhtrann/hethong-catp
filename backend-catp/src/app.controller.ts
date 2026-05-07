@@ -23,5 +23,9 @@ export class AppController {
   async login(@Body() body: { email: string; pass: string }) {
     return await this.appService.loginReal(body.email, body.pass);
   }
-  
+  // Mở API Đổi mật khẩu (dành cho user đã đăng nhập)
+  @Post('change-password')
+  async changePassword(@Body() body: { email: string; oldPass: string; newPass: string }) {
+    return await this.appService.changePassword(body.email, body.oldPass, body.newPass);
+  }
 }

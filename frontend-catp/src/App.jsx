@@ -45,10 +45,33 @@ function App() {
     localStorage.removeItem('catp_user');
   };
 
-  const handleChangePassword = (values) => {
-    message.info("Giao diện đổi mật khẩu đã xong! Chờ nối API Backend.");
-    setIsChangePassModalVisible(false);
-    passForm.resetFields();
+  // 👉 ĐÃ SỬA: HÀM XỬ LÝ ĐỔI MẬT KHẨU GỌI API THẬT
+  const handleChangePassword = async (values) => {
+    message.loading({ content: 'Đang xử lý...', key: 'changePass' });
+    
+    try {
+      const res = await fetch('http://localhost:3000/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: userInfo.email, // Lấy email của người đang đăng nhập
+          oldPass: values.oldPassword, 
+          newPass: values.newPassword 
+        }),
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        message.success({ content: data.message, key: 'changePass', duration: 3 });
+        setIsChangePassModalVisible(false); // Đóng Modal
+        passForm.resetFields(); // Xóa trắng form để lần sau mở lên không bị dính chữ cũ
+      } else {
+        message.error({ content: data.message, key: 'changePass', duration: 3 });
+      }
+    } catch (err) {
+      message.error({ content: 'Lỗi kết nối đến máy chủ!', key: 'changePass', duration: 3 });
+    }
   };
 
   // 👉 HÀM XỬ LÝ KHI CHỌN ẢNH AVATAR

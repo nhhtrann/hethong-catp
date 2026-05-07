@@ -87,5 +87,26 @@ async sendOtpEmail(emailTo: string) {
     
     return { success: true, message: 'Đặt lại mật khẩu thành công!' };
   }
+  // 👉 HÀM 3: ĐỔI MẬT KHẨU KHI ĐÃ ĐĂNG NHẬP
+  async changePassword(email: string, oldPass: string, newPass: string) {
+    // 1. Tìm user theo email
+    const user = await this.userRepository.findOne({ where: { email } });
+    
+    // 2. Kiểm tra user có tồn tại không
+    if (!user) {
+      return { success: false, message: 'Tài khoản không tồn tại!' };
+    }
+
+    // 3. Kiểm tra mật khẩu cũ có gõ đúng không
+    if (user.password !== oldPass) {
+      return { success: false, message: 'Mật khẩu hiện tại không chính xác!' };
+    }
+
+    // 4. Nếu đúng hết -> Lưu mật khẩu mới
+    user.password = newPass;
+    await this.userRepository.save(user);
+
+    return { success: true, message: 'Cập nhật mật khẩu mới thành công!' };
+  }
 }
 
