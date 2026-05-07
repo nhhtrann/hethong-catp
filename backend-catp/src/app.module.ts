@@ -25,27 +25,33 @@ import { AppService } from './app.service';
       inject: [ConfigService], 
       useFactory: (configService: ConfigService) => ({
         type: 'mssql',
-        host: configService.get<string>('DB_HOST'),
-        // 👉 ĐÃ SỬA: Ép kiểu chữ thành số một cách an toàn
+        host: configService.get<string>('DB_HOST') || 'localhost',
+        // Ép kiểu chữ thành số một cách an toàn
         port: parseInt(configService.get<string>('DB_PORT') || '1433', 10),
-        username: configService.get<string>('DB_USER'),
+        username: configService.get<string>('DB_USER') || 'sa',
         password: configService.get<string>('DB_PASSWORD'),
-        database: configService.get<string>('DB_NAME'),
+        database: configService.get<string>('DB_NAME') || 'hethong-catp',
         
-        // 👉 ĐÃ SỬA: Đưa các Entity vào đúng vị trí
+        // Đưa các Entity vào đúng vị trí
         entities: [Report, Unit, News, User],
         
         synchronize: true,
         extra: {
           trustServerCertificate: true,
+          // 👇 KHÚC NÀY ĐỂ FIX LỖI SSL (unsupported protocol) 👇
+          encrypt: false,
+          cryptoCredentialsDetails: {
+            minVersion: 'TLSv1',
+          },
+          // 👆 ============================================== 👆
         },
       }),
     }),
     TypeOrmModule.forFeature([User]),
     ReportsModule,
     UnitsModule,
-    NewsModule,TypeOrmModule.forFeature([User]),
-    
+    NewsModule,
+    // (Mình đã xóa 1 dòng TypeOrmModule.forFeature([User]) bị lặp lại ở đây)
   ],
   controllers: [AppController], 
   providers: [AppService],
