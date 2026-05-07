@@ -145,9 +145,9 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
       footer={null}
       centered
     >
-      {isCompleted && <Alert message="🔒 Hồ sơ đã chốt kết quả, khóa mọi chức năng chỉnh sửa." type="error" showIcon style={{ marginBottom: 16 }} />}
-      {mode === 'unit' && isPending && !isCompleted && <Alert message="⏳ Bạn đã nộp báo cáo. Đang chờ Ban Tiếp Nhận CATP phê duyệt chốt sổ." type="info" showIcon style={{ marginBottom: 16 }} />}
-      {mode === 'admin' && isPending && !isCompleted && <Alert message="🔔 Cơ quan đã gửi kết quả. Bạn có thể chỉnh sửa lại Ghi chú & Ảnh trước khi chọn 'Hoàn thành' để chốt sổ." type="warning" showIcon style={{ marginBottom: 16 }} />}
+      {isCompleted && <Alert message="Hồ sơ đã chốt kết quả, khóa mọi chức năng chỉnh sửa." type="error" showIcon style={{ marginBottom: 16 }} />}
+      {mode === 'unit' && isPending && !isCompleted && <Alert message="Bạn đã nộp báo cáo. Đang chờ Ban Tiếp Nhận CATP phê duyệt chốt sổ." type="info" showIcon style={{ marginBottom: 16 }} />}
+      {mode === 'admin' && isPending && !isCompleted && <Alert message="Cơ quan đã gửi kết quả. Bạn có thể chỉnh sửa lại Ghi chú & Ảnh trước khi chọn 'Hoàn thành' để chốt sổ." type="warning" showIcon style={{ marginBottom: 16 }} />}
 
       <Row gutter={24}>
         <Col span={12} style={{ borderRight: '1px solid #f0f0f0', paddingRight: 16 }}>
@@ -211,7 +211,7 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
                 onChange={handleUploadChange}
               >
                 <p className="ant-upload-drag-icon"><InboxOutlined /></p>
-                <p className="ant-upload-text">{disableResult ? "⛔ Đã khóa tải ảnh" : "Kéo thả ảnh báo cáo vào đây"}</p>
+                <p className="ant-upload-text">{disableResult ? "Đã khóa tải ảnh" : "Kéo thả ảnh báo cáo vào đây"}</p>
               </Dragger>
             </Form.Item>
 

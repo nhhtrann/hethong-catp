@@ -1,26 +1,31 @@
-import { Controller, Post, UseInterceptors, UploadedFile } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { Controller, Get, Post, Body } from '@nestjs/common';
+import { AppService } from './app.service';
 
-@Controller() // Hoặc @Controller('reports') tùy file bạn chọn
+@Controller()
 export class AppController {
+  constructor(private readonly appService: AppService) {}
 
-  // THÊM NGUYÊN ĐOẠN API NÀY VÀO TRONG CLASS
-  @Post('upload')
-  @UseInterceptors(FileInterceptor('file', {
-    storage: diskStorage({
-      destination: './uploads', // Lưu vào thư mục uploads
-      filename: (req, file, callback) => {
-        // Tạo tên file ngẫu nhiên để không bị đè ảnh (Ví dụ: 1715000000-hinhanh.jpg)
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        callback(null, uniqueSuffix + extname(file.originalname));
-      }
-    })
-  }))
-  uploadFile(@UploadedFile() file: Express.Multer.File) {
-    // Trả về cái tên file mới cho Frontend biết
-    return { fileName: file.filename };
+  // TẠO API NHẬN YÊU CẦU QUÊN MẬT KHẨU
+  @Post('forgot-password')
+  async forgotPassword(@Body('email') email: string) {
+    return await this.appService.sendOtpEmail(email);
+  }
+  
+  @Post('reset-password')
+  async resetPassword(
+    @Body() body: { email: string; otp: string; newPass: string }
+  ) {
+    return await this.appService.resetPassword(body.email, body.otp, body.newPass);
   }
 
+  // Thêm API này vào dưới cùng của AppController
+  @Post('login')
+  async login(@Body() body: { email: string; pass: string }) {
+    return await this.appService.loginReal(body.email, body.pass);
+  }
+  // Mở API Đổi mật khẩu (dành cho user đã đăng nhập)
+  @Post('change-password')
+  async changePassword(@Body() body: { email: string; oldPass: string; newPass: string }) {
+    return await this.appService.changePassword(body.email, body.oldPass, body.newPass);
+  }
 }
