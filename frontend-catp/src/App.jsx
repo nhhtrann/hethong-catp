@@ -2,7 +2,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
-// 👉 ĐÃ THÊM: Import Upload, IdcardOutlined và UploadOutlined
 import { Button, Dropdown, Avatar, Modal, Form, Input, message, Upload } from 'antd'; 
 import { UserOutlined, LockOutlined, LogoutOutlined, IdcardOutlined, UploadOutlined } from '@ant-design/icons';
 import './App.css';
@@ -19,23 +18,29 @@ import ResultReport from './pages/ResultReport';
 function App() {
   const [userRole, setUserRole] = useState(localStorage.getItem('userRole') || null);
   
-  // Lấy dữ liệu user từ Local Storage (có kèm avatar và tên nếu đã lưu)
-  const [userInfo, setUserInfo] = useState(JSON.parse(localStorage.getItem('catp_user')) || { email: 'Đang tải...' });
+  const [userInfo, setUserInfo] = useState(() => {
+  const saved = localStorage.getItem('catp_user');
+  return saved ? JSON.parse(saved) : { email: 'Đang tải...', fullName: '', avatar: null };
+});
 
-  // States quản lý 2 Modal (Đổi pass và Hồ sơ)
+  useEffect(() => {
+  const saved = localStorage.getItem('catp_user');
+  if (saved) {
+    setUserInfo(JSON.parse(saved));
+  }
+}, [userRole]);
+
   const [isChangePassModalVisible, setIsChangePassModalVisible] = useState(false);
   const [isProfileModalVisible, setIsProfileModalVisible] = useState(false);
   
   const [passForm] = Form.useForm();
   const [profileForm] = Form.useForm();
   
-  // State lưu ảnh Avatar tạm thời lúc đang chọn
   const [previewAvatar, setPreviewAvatar] = useState(userInfo?.avatar || null);
 
   const handleLogin = (role) => {
     setUserRole(role);
     localStorage.setItem('userRole', role);
-    // Cập nhật lại userInfo sau khi login
     setUserInfo(JSON.parse(localStorage.getItem('catp_user')));
   };
 
@@ -45,7 +50,6 @@ function App() {
     localStorage.removeItem('catp_user');
   };
 
-  // 👉 ĐÃ SỬA: HÀM XỬ LÝ ĐỔI MẬT KHẨU GỌI API THẬT
   const handleChangePassword = async (values) => {
     message.loading({ content: 'Đang xử lý...', key: 'changePass' });
     
@@ -54,7 +58,7 @@ function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          email: userInfo.email, // Lấy email của người đang đăng nhập
+          email: userInfo.email, 
           oldPass: values.oldPassword, 
           newPass: values.newPassword 
         }),
@@ -64,8 +68,8 @@ function App() {
       
       if (data.success) {
         message.success({ content: data.message, key: 'changePass', duration: 3 });
-        setIsChangePassModalVisible(false); // Đóng Modal
-        passForm.resetFields(); // Xóa trắng form để lần sau mở lên không bị dính chữ cũ
+        setIsChangePassModalVisible(false); 
+        passForm.resetFields(); 
       } else {
         message.error({ content: data.message, key: 'changePass', duration: 3 });
       }
@@ -74,9 +78,7 @@ function App() {
     }
   };
 
-  // 👉 HÀM XỬ LÝ KHI CHỌN ẢNH AVATAR
   const handleAvatarChange = (info) => {
-    // Ép React không gọi API ngay mà chỉ tạo đường dẫn xem trước (Blob URL)
     if (info.fileList.length > 0) {
       const file = info.fileList[info.fileList.length - 1].originFileObj;
       const imageUrl = URL.createObjectURL(file);
@@ -84,19 +86,39 @@ function App() {
     }
   };
 
-  // 👉 HÀM LƯU HỒ SƠ
-  const handleSaveProfile = (values) => {
-    const updatedInfo = { ...userInfo, fullName: values.fullName, avatar: previewAvatar };
+  // 👉 ĐÃ SỬA: Gọi API để lưu Profile vào SQL
+  const handleSaveProfile = async (values) => {
+    message.loading({ content: 'Đang lưu hồ sơ...', key: 'updateProfile' });
     
-    // Lưu vào State và Local Storage
-    setUserInfo(updatedInfo);
-    localStorage.setItem('catp_user', JSON.stringify(updatedInfo));
-    
-    message.success("Đã cập nhật hồ sơ thành công!");
-    setIsProfileModalVisible(false);
+    try {
+      const response = await fetch('http://localhost:3000/Users/update-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: userInfo.email, // Dùng email để làm chìa khóa tìm user trong SQL
+          fullName: values.fullName,
+          avatar: previewAvatar // Chuỗi Base64 của ảnh
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Nếu SQL lưu thành công thì mới cập nhật lại giao diện và LocalStorage
+        const updatedInfo = { ...userInfo, fullName: values.fullName, avatar: previewAvatar };
+        setUserInfo(updatedInfo);
+        localStorage.setItem('catp_user', JSON.stringify(updatedInfo));
+        
+        message.success({ content: "Đã cập nhật hồ sơ thành công!", key: 'updateProfile', duration: 3 });
+        setIsProfileModalVisible(false);
+      } else {
+        message.error({ content: data.message || "Lỗi khi lưu hồ sơ!", key: 'updateProfile', duration: 3 });
+      }
+    } catch (error) {
+      message.error({ content: "Không thể kết nối đến máy chủ!", key: 'updateProfile', duration: 3 });
+    }
   };
 
-  // Cấu trúc Menu Dropdown
   const userMenu = {
     items: [
       {
@@ -104,13 +126,12 @@ function App() {
         icon: <IdcardOutlined />,
         label: 'Hồ sơ cá nhân',
         onClick: () => {
-          // Đổ dữ liệu vào Form khi mở Modal
           profileForm.setFieldsValue({
             email: userInfo.email,
             role: userRole === 'admin' ? 'Quản trị viên (Admin)' : 'Cán bộ Đơn vị',
             fullName: userInfo.fullName || ''
           });
-          setPreviewAvatar(userInfo.avatar); // Reset lại ảnh xem trước về ảnh hiện tại
+          setPreviewAvatar(userInfo.avatar); 
           setIsProfileModalVisible(true);
         },
       },
@@ -137,22 +158,21 @@ function App() {
 
   return (
     <BrowserRouter>
-      <div className="app-layout" style={{ display: 'flex', height: '100vh', width: '100vw' }}>
+      <div className="app-layout" style={{ display: 'flex', height: '100vh', width: '100%' }}>
         <Sidebar role={userRole} />
         
         <div className="main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           
-          <header className="top-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 24px', height: '64px', background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
+          <header className="top-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 24px 0 60px', height: '64px', background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
             <h1 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>Hệ thống Quản lý CATP</h1>
             
-            {/* AVATAR HEADER CẬP NHẬT ẢNH MỚI */}
             <Dropdown menu={userMenu} placement="bottomRight" trigger={['click']}>
               <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '8px' }}>
                 <Avatar 
                   size="large" 
-                  src={userInfo?.avatar} // Lấy ảnh từ State
+                  src={userInfo?.avatar} 
                   icon={!userInfo?.avatar && <UserOutlined />} 
-                  style={{ backgroundColor: '#1890ff', border: '2px solid #e6f7ff' }} 
+                  style={{ backgroundColor: '#1890ff', border: '2px solid #e6f7ff', objectFit: 'cover' }} 
                 />
                 <span style={{ fontWeight: 500, display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
                   <span>{userInfo?.fullName || (userRole === 'admin' ? 'Admin' : 'Cán bộ')}</span>
@@ -189,7 +209,6 @@ function App() {
         </div>
       </div>
 
-      {/* 👉 1. MODAL HỒ SƠ CÁ NHÂN */}
       <Modal
         title={<b><IdcardOutlined /> Hồ sơ cá nhân</b>}
         open={isProfileModalVisible}
@@ -200,11 +219,10 @@ function App() {
         centered
       >
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px' }}>
-          {/* COMPONENT UPLOAD ẢNH CỦA ANTD */}
           <Upload
             name="avatar"
             showUploadList={false}
-            beforeUpload={() => false} // Chặn không cho tự động upload lên mạng
+            beforeUpload={() => false} 
             onChange={handleAvatarChange}
           >
             <div style={{ position: 'relative', cursor: 'pointer' }}>
@@ -212,7 +230,7 @@ function App() {
                 size={90} 
                 src={previewAvatar} 
                 icon={!previewAvatar && <UserOutlined />} 
-                style={{ backgroundColor: '#bfbfbf', border: '3px solid #1890ff', marginBottom: '10px' }} 
+                style={{ backgroundColor: '#bfbfbf', border: '3px solid #1890ff', marginBottom: '10px', objectFit: 'cover' }} 
               />
             </div>
             <div style={{ textAlign: 'center' }}>
@@ -234,7 +252,6 @@ function App() {
         </Form>
       </Modal>
 
-      {/* 👉 2. MODAL ĐỔI MẬT KHẨU */}
       <Modal
         title={<b><LockOutlined /> Đổi mật khẩu tài khoản</b>}
         open={isChangePassModalVisible}

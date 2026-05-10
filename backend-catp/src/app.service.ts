@@ -36,7 +36,12 @@ export class AppService {
     }
 
     // Nếu thành công, trả về thông tin user
-    return { success: true, email: user.email, role: user.role };
+    return { success: true, 
+      email: user.email, 
+      role: user.role,
+      fullName: user.fullName,
+      avatar: user.avatar,
+    };
   }
 
   // ... (Hàm sendOtpEmail của bạn giữ nguyên không đổi) ...

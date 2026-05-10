@@ -25,15 +25,13 @@ const LoginPage = ({ onLogin }) => {
       setLoading(false);
 
       if (data.success) {
-        message.success(`Đăng nhập thành công với quyền ${data.role === 'admin' ? 'Admin' : 'Đơn vị'}!`);
-        
-        // Lưu vào Local Storage
-        localStorage.setItem('catp_user', JSON.stringify({ email: data.email, role: data.role }));
-        
-        onLogin(data.role); // Chuyển trang
-      } else {
-        message.error(data.message); // Hiển thị lỗi từ Backend gửi về
-      }
+    // 👉 ĐÃ SỬA: Lưu toàn bộ data (có cả fullName và avatar) vào localStorage
+    localStorage.setItem('catp_user', JSON.stringify(data)); 
+    onLogin(data.role); // Gọi hàm handleLogin ở App.jsx
+    message.success('Đăng nhập thành công!');
+  } else {
+    message.error(data.message);
+  }
     } catch (err) {
       setLoading(false);
       message.error('Lỗi kết nối đến máy chủ!');

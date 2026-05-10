@@ -1,42 +1,141 @@
 // src/components/Sidebar.jsx
+import React, { useState, useEffect, useRef } from 'react';
+import { Layout, Menu, Tag } from 'antd'; // 👉 Đã bỏ Button vì không dùng nút X nữa
 import { useNavigate, useLocation } from 'react-router-dom';
 
+import {
+  DashboardOutlined, InboxOutlined, FileTextOutlined,
+  BankOutlined, BarChartOutlined, NotificationOutlined,
+  MenuOutlined
+  // 👉 Đã bỏ CloseOutlined
+} from '@ant-design/icons';
+
+import logoMobi from '../uploads/logo.jpg'; 
+
+const { Sider } = Layout;
+
 const Sidebar = ({ role }) => {
+  const [collapsed, setCollapsed] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 992);
+  const sidebarRef = useRef(null); 
+  
   const navigate = useNavigate(); 
   const location = useLocation(); 
 
-  // ĐÃ SỬA: Phân quyền rạch ròi 100%. Admin có 5 trang, Đơn vị có đúng 1 trang.
   const allMenus = [
-    { path: '/dashboard', icon: '📊', label: 'Tổng quan (Dashboard)', roles: ['admin'] },
-    { path: '/tiep-nhan', icon: '📩', label: 'Tiếp nhận & Điều phối', roles: ['admin'] },
-    { path: '/bao-cao-ket-qua', icon: '📝', label: 'Nhiệm vụ & Báo cáo', roles: ['unit'] },
-    { path: '/don-vi', icon: '🏢', label: 'Quản lý Đơn vị', roles: ['admin'] },
-    { path: '/bao-cao', icon: '📈', label: 'Báo cáo & Thống kê', roles: ['admin'] },
-    { path: '/tuyen-truyen', icon: '📰', label: 'Tuyên truyền Pháp luật', roles: ['admin'] }
+    { key: '/dashboard', icon: <DashboardOutlined />, label: 'Tổng quan', roles: ['admin'] },
+    { key: '/tiep-nhan', icon: <InboxOutlined />, label: 'Tiếp nhận & Điều phối', roles: ['admin'] },
+    { key: '/bao-cao-ket-qua', icon: <FileTextOutlined />, label: 'Nhiệm vụ & Báo cáo', roles: ['unit'] },
+    { key: '/don-vi', icon: <BankOutlined />, label: 'Quản lý Đơn vị', roles: ['admin'] },
+    { key: '/bao-cao', icon: <BarChartOutlined />, label: 'Báo cáo & Thống kê', roles: ['admin'] },
+    { key: '/tuyen-truyen', icon: <NotificationOutlined />, label: 'Tuyên truyền Pháp luật', roles: ['admin'] }
   ];
 
   const allowedMenus = allMenus.filter(menu => menu.roles.includes(role));
 
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 992;
+      setIsMobile(mobile);
+      if (mobile) {
+        setCollapsed(true);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (sidebarRef.current && !sidebarRef.current.contains(event.target)) {
+        setCollapsed(true); 
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
-    <div className="sidebar">
-      <div className="logo-area">
-        <h2>🚓 BAN TN CATP</h2>
-        <span className="role-badge" style={{ backgroundColor: role === 'admin' ? '#2563eb' : '#10b981'}}>
-          {role === 'admin' ? 'Admin' : 'Đơn vị xử lý'}
-        </span>
-      </div>
+    <div ref={sidebarRef} style={{ zIndex: 1001 }}>
       
-      <ul>
-        {allowedMenus.map((item) => (
-          <li 
-            key={item.path} 
-            className={location.pathname === item.path ? 'active' : ''}
-            onClick={() => navigate(item.path)}
-          >
-            <span className="icon">{item.icon}</span> {item.label}
-          </li>
-        ))}
-      </ul>
+      <div
+        onClick={() => setCollapsed(false)}
+        style={{
+          position: 'fixed',
+          top: 16,
+          left: 16,
+          zIndex: 1000,
+          display: collapsed ? 'flex' : 'none', 
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          width: '32px',
+          height: '32px'
+        }}
+      >
+        <MenuOutlined style={{ fontSize: '22px', color: '#333' }} />
+      </div>
+
+      <Sider 
+        trigger={null} 
+        collapsible 
+        collapsed={collapsed} 
+        collapsedWidth={0} 
+        width={250}
+        theme="dark" 
+        style={{
+          height: '100vh',
+          position: isMobile ? 'fixed' : 'relative', 
+          left: 0,
+          top: 0,
+          zIndex: 1001,
+          boxShadow: '2px 0 8px 0 rgba(29,35,41,.05)',
+          transition: 'all 0.3s cubic-bezier(0.2, 0, 0, 1) 0s'
+        }}
+      >
+        {/* 👉 ĐÃ SỬA: Xóa nút X, đổi thành justifyContent: 'center' để căn giữa ảnh */}
+        <div style={{ 
+          height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '0 12px', background: '#001529', borderBottom: '1px solid rgba(255,255,255,0.1)'
+        }}>
+          {!collapsed && (
+            <img 
+              src={logoMobi} 
+              alt="MobiFone Logo" 
+              style={{ width: '90%', maxHeight: '54px', objectFit: 'contain' }} 
+            />
+          )}
+        </div>
+
+        {!collapsed && (
+          <div style={{ textAlign: 'center', marginTop: '16px', marginBottom: '8px' }}>
+            <Tag 
+              color={role === 'admin' ? '#2563eb' : '#10b981'} 
+              style={{ fontSize: '12px', padding: '4px 12px', borderRadius: '12px', border: 'none' }}
+            >
+              {role === 'admin' ? 'Admin CATP' : 'Đơn vị xử lý'}
+            </Tag>
+          </div>
+        )}
+
+        <Menu
+          theme="dark"
+          mode="inline"
+          selectedKeys={[location.pathname]} 
+          onClick={({ key }) => {
+            navigate(key);
+            if (isMobile) setCollapsed(true);
+          }} 
+          items={allowedMenus.map(item => ({
+            ...item,
+            style: { textAlign: 'left' } 
+          }))} 
+          style={{ 
+            marginTop: '8px',
+            textAlign: 'left' 
+          }}
+        />
+      </Sider>
     </div>
   );
 };

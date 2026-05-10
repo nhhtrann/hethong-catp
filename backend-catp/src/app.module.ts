@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ReportsModule } from './reports/reports.module';
 import { UnitsModule } from './units/units.module';
+import { UsersModule } from './users/users.module';
 import { Report } from './reports/entities/report.entity';
 import { Unit } from './units/entities/unit.entity';
 import { News } from './news/entities/news.entity';
@@ -44,6 +45,7 @@ import { AppService } from './app.service';
     TypeOrmModule.forFeature([User]),
     ReportsModule,
     UnitsModule,
+    UsersModule,
     NewsModule,TypeOrmModule.forFeature([User]),
     
   ],

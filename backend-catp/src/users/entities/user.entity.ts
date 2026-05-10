@@ -13,4 +13,11 @@ export class User {
 
   @Column({ default: 'unit' })
   role: string; // Phân quyền: 'admin' hoặc 'unit'
+
+  // Ví dụ trong file user.entity.ts
+  @Column({ nullable: true })
+  fullName: string;
+
+  @Column({ type: 'nvarchar', length: 'MAX', nullable: true })
+  avatar: string;
 }
