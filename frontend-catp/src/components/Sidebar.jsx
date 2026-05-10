@@ -1,24 +1,12 @@
 // src/components/Sidebar.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { Layout, Menu, Tag } from 'antd'; // 👉 Đã bỏ Button vì không dùng nút X nữa
+import { Layout, Menu, Tag } from 'antd'; 
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Layout, Menu, Typography, Drawer } from 'antd'; 
-import { 
-  AppstoreOutlined, 
-  MailOutlined, 
-  InboxOutlined, 
-  ProfileOutlined, 
-  UsergroupAddOutlined, 
-  AreaChartOutlined, 
-  ReadOutlined,
-  FileDoneOutlined
-} from '@ant-design/icons';
 
 import {
   DashboardOutlined, InboxOutlined, FileTextOutlined,
   BankOutlined, BarChartOutlined, NotificationOutlined,
   MenuOutlined
-  // 👉 Đã bỏ CloseOutlined
 } from '@ant-design/icons';
 
 import logoMobi from '../uploads/logo.jpg'; 
@@ -68,124 +56,54 @@ const Sidebar = ({ role }) => {
 
   return (
     <div ref={sidebarRef} style={{ zIndex: 1001 }}>
-      
       <div
         onClick={() => setCollapsed(false)}
         style={{
-          position: 'fixed',
-          top: 16,
-          left: 16,
-          zIndex: 1000,
-          display: collapsed ? 'flex' : 'none', 
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          width: '32px',
-          height: '32px'
+          position: 'fixed', top: 16, left: 16, zIndex: 1000,
+          display: collapsed ? 'flex' : 'none', alignItems: 'center',
+          justifyContent: 'center', cursor: 'pointer', width: '32px', height: '32px'
         }}
       >
-        <MenuOutlined style={{ fontSize: '22px', color: '#333' }} />
+        {/* 👉 ĐÃ SỬA: Icon menu đổi màu xanh MobiFone */}
+        <MenuOutlined style={{ fontSize: '22px', color: '#005bac' }} />
       </div>
 
       <Sider 
-        trigger={null} 
-        collapsible 
-        collapsed={collapsed} 
-        collapsedWidth={0} 
-        width={250}
-        theme="dark" 
+        trigger={null} collapsible collapsed={collapsed} collapsedWidth={0} width={250}
+        theme="light" // 👉 ĐÃ SỬA: Chuyển Sidebar sang màu Trắng
         style={{
-          height: '100vh',
-          position: isMobile ? 'fixed' : 'relative', 
-          left: 0,
-          top: 0,
-          zIndex: 1001,
-          boxShadow: '2px 0 8px 0 rgba(29,35,41,.05)',
-          transition: 'all 0.3s cubic-bezier(0.2, 0, 0, 1) 0s'
+          height: '100vh', position: isMobile ? 'fixed' : 'relative', left: 0, top: 0, zIndex: 1001,
+          boxShadow: '2px 0 8px 0 rgba(29,35,41,.08)', transition: 'all 0.3s cubic-bezier(0.2, 0, 0, 1) 0s'
         }}
       >
-        {/* 👉 ĐÃ SỬA: Xóa nút X, đổi thành justifyContent: 'center' để căn giữa ảnh */}
+        {/* 👉 ĐÃ SỬA: Nền chỗ chứa Logo thành màu Trắng, có viền kẻ dưới xám nhạt */}
         <div style={{ 
           height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '0 12px', background: '#001529', borderBottom: '1px solid rgba(255,255,255,0.1)'
+          padding: '0 12px', background: '#ffffff', borderBottom: '1px solid #f0f0f0'
         }}>
           {!collapsed && (
-            <img 
-              src={logoMobi} 
-              alt="MobiFone Logo" 
-              style={{ width: '90%', maxHeight: '54px', objectFit: 'contain' }} 
-            />
+            <img src={logoMobi} alt="MobiFone Logo" style={{ width: '90%', maxHeight: '54px', objectFit: 'contain' }} />
           )}
         </div>
 
         {!collapsed && (
           <div style={{ textAlign: 'center', marginTop: '16px', marginBottom: '8px' }}>
-            <Tag 
-              color={role === 'admin' ? '#2563eb' : '#10b981'} 
-              style={{ fontSize: '12px', padding: '4px 12px', borderRadius: '12px', border: 'none' }}
-            >
+            <Tag color={role === 'admin' ? '#005bac' : '#10b981'} style={{ fontSize: '12px', padding: '4px 12px', borderRadius: '12px', border: 'none' }}>
               {role === 'admin' ? 'Admin CATP' : 'Đơn vị xử lý'}
             </Tag>
           </div>
         )}
 
         <Menu
-          theme="dark"
+          theme="light" // 👉 ĐÃ SỬA: Chuyển Menu sang màu Trắng, khi hover/active nó sẽ tự bắt màu Xanh từ ConfigProvider
           mode="inline"
           selectedKeys={[location.pathname]} 
-          onClick={({ key }) => {
-            navigate(key);
-            if (isMobile) setCollapsed(true);
-          }} 
-          items={allowedMenus.map(item => ({
-            ...item,
-            style: { textAlign: 'left' } 
-          }))} 
-          style={{ 
-            marginTop: '8px',
-            textAlign: 'left' 
-          }}
+          onClick={({ key }) => { navigate(key); if (isMobile) setCollapsed(true); }} 
+          items={allowedMenus.map(item => ({ ...item, style: { textAlign: 'left', fontWeight: location.pathname === item.key ? '600' : 'normal' } }))} 
+          style={{ marginTop: '8px', textAlign: 'left', borderRight: 0 }}
         />
       </Sider>
     </div>
-  );
-
-  if (isMobile) {
-    return (
-      <Drawer
-        placement="left" 
-        width={260}
-        open={menuVisible}
-        onClose={() => setMenuVisible(false)} 
-        styles={{ body: { padding: 0 } }} 
-        closable={false} 
-      >
-        {SidebarContent}
-      </Drawer>
-    );
-  }
-
-  return (
-    <Sider 
-      width={260} 
-      collapsedWidth={80} 
-      collapsible 
-      collapsed={desktopCollapsed} 
-      trigger={null} 
-      theme="light" 
-      style={{ 
-        overflow: 'auto', 
-        height: '100vh', 
-        position: 'fixed', 
-        left: 0, 
-        top: 0, 
-        bottom: 0,
-        zIndex: 101, 
-        borderRight: '1px solid #f0f0f0' 
-      }}
-    >
-      {SidebarContent}
-    </Sider>
   );
 };
 

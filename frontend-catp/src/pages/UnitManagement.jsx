@@ -24,7 +24,7 @@ const UnitManagement = () => {
 
   // 👉 BỔ SUNG: Trạng thái kiểm tra màn hình điện thoại
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-
+  const [currentPage, setCurrentPage] = useState(1);
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
@@ -144,7 +144,8 @@ message.error(errorData.message || 'Lỗi khi thêm đơn vị!');
 
   // 👉 ĐÃ SỬA: Căn giữa, ghim cố định cột hành động bên phải
   const columns = [
-    { title: 'STT', key: 'stt', width: 60, align: 'center', render: (text, record, index) => index + 1 },
+    { title: 'STT', key: 'stt', width: 60, align: 'center', render: (text, record, index) => (currentPage - 1) * 8 + index + 1 
+    },
     { title: 'Tên đơn vị', dataIndex: 'tenDonVi', key: 'tenDonVi', width: 250, align: 'center' },
     { title: 'Người liên hệ', dataIndex: 'nguoiLienHe', key: 'nguoiLienHe', width: 200, align: 'center' },
     { title: 'Số điện thoại', dataIndex: 'soDienThoai', key: 'soDienThoai', width: 150, align: 'center' },
@@ -269,7 +270,9 @@ icon={<EditOutlined style={{ color: '#1890ff', fontSize: '16px' }} />}
             pageSize: 8,
             showSizeChanger: false, 
             showLessItems: true,    
-            simple: isMobile        
+            simple: isMobile,
+            current: currentPage,
+            onChange: (page) => setCurrentPage(page)
           }}
         />
       </Card>

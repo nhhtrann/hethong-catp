@@ -1,6 +1,6 @@
 import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 
-@Entity('Users') // Tên bảng trong SQL Server
+@Entity('users') // Tên bảng trong SQL Server
 export class User {
   @PrimaryGeneratedColumn()
   id: number;

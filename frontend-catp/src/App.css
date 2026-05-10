@@ -1,9 +1,9 @@
 /* src/App.css */
-
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 /* 1. CẤU HÌNH CHUNG */
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   background-color: #f8fafc; /* Màu nền xám nhạt hiện đại hơn */
   color: #1e293b;
 }
@@ -141,4 +141,17 @@ body {
 /* Tăng khoảng cách giữa các hàng trong Menu Sidebar cho thoáng mắt */
 .ant-menu-item {
   margin-block: 8px !important;
+}
+/* Tắt viền thừa bên trong của các ô Input có icon (như Password) */
+.ant-input-affix-wrapper input {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Đảm bảo khi click vào ô nhập bên trong không bị hiện viền xanh đen của trình duyệt */
+.ant-input-affix-wrapper input:focus {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
 }

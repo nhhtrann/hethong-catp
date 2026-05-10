@@ -28,7 +28,9 @@ const PublicAwareness = () => {
   
   const [searchText, setSearchText] = useState('');
   const [filterTacGia, setFilterTacGia] = useState('Tất cả');
-  const [filterNgay, setFilterNgay] = useState(null); 
+  // 👉 ĐÃ SỬA: Tách thành 2 biến riêng biệt
+  const [tuNgay, setTuNgay] = useState(null);
+  const [denNgay, setDenNgay] = useState(null);
 
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
 
@@ -44,6 +46,7 @@ const PublicAwareness = () => {
   const [deletingIds, setDeletingIds] = useState([]);
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -82,22 +85,27 @@ const PublicAwareness = () => {
 
     if (searchText) {
       const lowercasedFilter = searchText.toLowerCase();
-      result = result.filter(item =>
-item.tieuDe?.toLowerCase().includes(lowercasedFilter)
-      );
+      result = result.filter(item => item.tieuDe?.toLowerCase().includes(lowercasedFilter));
     }
 
     if (filterTacGia && filterTacGia !== 'Tất cả') {
       result = result.filter(item => item.tacGia === filterTacGia);
     }
 
-    if (filterNgay) {
-      const targetDate = filterNgay.format('DD/MM/YYYY');
-      result = result.filter(item => item.ngayHienThi === targetDate);
+    if (tuNgay || denNgay) {
+      const startTimestamp = tuNgay ? tuNgay.startOf('day').valueOf() : 0;
+      const endTimestamp = denNgay ? denNgay.endOf('day').valueOf() : Infinity;
+
+      result = result.filter(item => {
+        if (!item.ngayDang) return false;
+        const itemTime = new Date(item.ngayDang).getTime();
+        return itemTime >= startTimestamp && itemTime <= endTimestamp; 
+      });
     }
 
     setFilteredData(result);
-  }, [searchText, filterTacGia, filterNgay, data]);
+    setCurrentPage(1); // 👉 BỔ SUNG: Ép bảng quay về trang 1 và đếm STT lại từ 1 mỗi khi lọc
+  }, [searchText, filterTacGia, tuNgay, denNgay, data]);
 
   const authors = ['Tất cả', ...new Set(data.map(item => item.tacGia).filter(Boolean))];
 
@@ -189,7 +197,11 @@ onChange: (newSelectedRowKeys) => setSelectedRowKeys(newSelectedRowKeys),
 
   // 👉 ĐÃ SỬA: Ép toàn bộ text căn giữa (align: 'center')
   const columns = [
-    { title: 'STT', dataIndex: 'stt', key: 'stt', width: 60, align: 'center' },
+    { title: 'STT', 
+      key: 'stt', 
+      width: 60, 
+      align: 'center',
+      render: (text, record, index) => (currentPage - 1) * 8 + index + 1},
     { 
       title: 'Hình ảnh', 
       dataIndex: 'hinhAnh', 
@@ -251,9 +263,8 @@ onChange: (newSelectedRowKeys) => setSelectedRowKeys(newSelectedRowKeys),
         <div style={{ textAlign: 'center' }}>
           {/* Chữ to hơn 1 xíu (clamp tự tăng kích thước trên PC) */}
           <Title level={2} style={{ margin: 0, fontSize: 'clamp(24px, 5vw, 36px)' }}>
-            <ReadOutlined style={{ marginRight: '10px', color: '#3b82f6' }} />
             Tuyên truyền & Cảnh báo
-</Title>
+          </Title>
           <Text type="secondary" style={{ fontSize: 'clamp(14px, 2vw, 16px)' }}>
             Cập nhật tin tức an ninh trật tự, tuyên truyền pháp luật.
           </Text>
@@ -313,21 +324,33 @@ onChange: (newSelectedRowKeys) => setSelectedRowKeys(newSelectedRowKeys),
               ))}
             </Select>
 
-            <DatePicker 
-              format="DD/MM/YYYY" 
-              placeholder="Lọc theo Ngày đăng"
-              value={filterNgay}
-              onChange={(date) => setFilterNgay(date)}
-              style={{ width: '100%', minWidth: '150px', maxWidth: '180px' }}
-            />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <DatePicker 
+                format="DD/MM/YYYY" 
+                placeholder="Từ ngày"
+                value={tuNgay}
+                onChange={(date) => setTuNgay(date)}
+                style={{ width: '130px' }} 
+              />
+              <span style={{ color: '#8c8c8c' }}>-</span>
+              <DatePicker 
+                format="DD/MM/YYYY" 
+                placeholder="Đến ngày"
+                value={denNgay}
+                onChange={(date) => setDenNgay(date)}
+                style={{ width: '130px' }} 
+              />
+            </div>
 
-            {(searchText || filterTacGia !== 'Tất cả' || filterNgay) && (
+            {/* 👉 ĐÃ SỬA: Cập nhật lại nút Bỏ lọc */}
+            {(searchText || filterTacGia !== 'Tất cả' || tuNgay || denNgay) && (
               <Button 
                 type="link" 
                 onClick={() => {
                   setSearchText('');
                   setFilterTacGia('Tất cả');
-                  setFilterNgay(null);
+                  setTuNgay(null); // Xóa Từ ngày
+                  setDenNgay(null); // Xóa Đến ngày
                 }}
               >
                 Bỏ lọc
@@ -336,12 +359,17 @@ onChange: (newSelectedRowKeys) => setSelectedRowKeys(newSelectedRowKeys),
           </Space>
         </div>
 
-        <Table columns={columns} 
+        <Table 
+          columns={columns} 
           dataSource={filteredData} 
           rowSelection={rowSelection}
           scroll={{ x: 1000 }} 
           bordered
-          pagination={{ pageSize: 8 }}
+          pagination={{ 
+            pageSize: 8,
+            current: currentPage, // 👉 BỔ SUNG
+            onChange: (page) => setCurrentPage(page) // 👉 BỔ SUNG
+          }}
         />
       </Card>
 

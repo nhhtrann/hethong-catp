@@ -28,4 +28,10 @@ export class AppController {
   async changePassword(@Body() body: { email: string; oldPass: string; newPass: string }) {
     return await this.appService.changePassword(body.email, body.oldPass, body.newPass);
   }
+  // Bỏ vào bên trong class AppController nhé
+  @Post('update-profile')
+  async updateProfile(@Body() updateData: { email: string; fullName: string; avatar: string }) {
+    // Nếu bạn dùng AppService thì đổi this.usersService thành this.appService nhé
+    return this.appService.updateProfile(updateData.email, updateData.fullName, updateData.avatar);
+  }
 }

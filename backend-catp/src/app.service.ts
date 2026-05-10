@@ -113,5 +113,18 @@ async sendOtpEmail(emailTo: string) {
 
     return { success: true, message: 'Cập nhật mật khẩu mới thành công!' };
   }
-}
+  // 👉 HÀM 4: CẬP NHẬT HỒ SƠ (FULLNAME VÀ AVATAR)
+  async updateProfile(email: string, fullName: string, avatar: string) {
+    const user = await this.userRepository.findOne({ where: { email } });
 
+    if (!user) {
+      return { success: false, message: 'Tài khoản không tồn tại!' };
+    }
+
+    user.fullName = fullName;
+    user.avatar = avatar;
+    await this.userRepository.save(user);
+
+    return { success: true, message: 'Cập nhật hồ sơ thành công!' };
+  }
+}

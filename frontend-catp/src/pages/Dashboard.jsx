@@ -10,6 +10,15 @@ const Dashboard = () => {
   const [data, setData] = useState([]);
   const [news, setNews] = useState([]);
 
+  // 👉 BỔ SUNG: Trạng thái nhận diện màn hình điện thoại
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   useEffect(() => {
     fetch('http://localhost:3000/reports')
       .then(res => res.json())
@@ -34,11 +43,27 @@ const Dashboard = () => {
   ];
   const COLORS = ['#ef4444', '#f59e0b', '#10b981'];
 
+  // 👉 ĐÃ SỬA: Căn giữa các cột, tô đậm đơn vị và cắt gọn chữ (ellipsis)
   const columns = [
-    { title: 'Tiêu đề', dataIndex: 'tieuDe', key: 'tieuDe' },
-    { title: 'Đơn vị xử lý', dataIndex: 'donViXuLy', key: 'donViXuLy', render: (val) => val || 'Chưa phân công' },
+    { 
+      title: 'Tiêu đề', 
+      dataIndex: 'tieuDe', 
+      key: 'tieuDe', 
+      align: 'center', 
+      ellipsis: true 
+    },
+    { 
+      title: 'Đơn vị xử lý', 
+      dataIndex: 'donViXuLy', 
+      key: 'donViXuLy', 
+      align: 'center', 
+      render: (val) => val ? <b style={{ color: '#1890ff' }}>{val}</b> : <span style={{ color: '#999' }}>Chưa phân công</span> 
+    },
     {
-      title: 'Trạng thái', dataIndex: 'trangThai', key: 'trangThai',
+      title: 'Trạng thái', 
+      dataIndex: 'trangThai', 
+      key: 'trangThai', 
+      align: 'center',
       render: (trangThai) => {
         let color = trangThai === 'Mới' ? 'volcano' : (trangThai === 'Đang xử lý' ? 'gold' : 'green');
         return <Tag color={color}>{trangThai?.toUpperCase()}</Tag>;
@@ -47,29 +72,33 @@ const Dashboard = () => {
   ];
 
   return (
-    // 👉 ĐÃ SỬA: Gỡ padding trùng lặp và thêm overflowX: 'hidden'
     <div style={{ overflowX: 'hidden' }}>
-      <Title level={2} style={{ marginBottom: '24px' }}>Tổng quan Hệ thống</Title>
+      
+      {/* 👉 ĐÃ SỬA: Căn giữa tiêu đề trên mobile, tự động co giãn font chữ */}
+      <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+        <Title level={2} style={{ margin: 0, fontSize: 'clamp(20px, 4vw, 28px)' }}>
+          Tổng quan Hệ thống
+        </Title>
+      </div>
 
-      {/* 👉 ĐÃ SỬA: Bỏ marginLeft, marginRight để Card thẳng hàng với Tiêu đề */}
       <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
         <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+          <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)', borderLeft: '4px solid #3b82f6' }}>
             <Statistic title="Tổng số vụ việc" value={total} prefix={<FileTextOutlined />} />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+          <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)', borderLeft: '4px solid #ef4444' }}>
             <Statistic title="Phản ánh Mới (Cần xử lý)" value={moi} valueStyle={{ color: '#ef4444' }} prefix={<AlertOutlined />} />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-<Statistic title="Đang xử lý" value={dangXuLy} valueStyle={{ color: '#f59e0b' }} prefix={<SyncOutlined spin />} />
+          <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)', borderLeft: '4px solid #f59e0b' }}>
+            <Statistic title="Đang xử lý" value={dangXuLy} valueStyle={{ color: '#f59e0b' }} prefix={<SyncOutlined spin />} />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+          <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)', borderLeft: '4px solid #10b981' }}>
             <Statistic title="Đã hoàn thành" value={hoanThanh} valueStyle={{ color: '#10b981' }} prefix={<CheckCircleOutlined />} />
           </Card>
         </Col>
@@ -84,7 +113,8 @@ const Dashboard = () => {
               pagination={false} 
               rowKey="id"
               size="small"
-              scroll={{ x: 500 }} 
+              bordered
+              scroll={{ x: 600 }} // Đảm bảo bảng không bị bóp méo trên đt
             />
           </Card>
         </Col>
