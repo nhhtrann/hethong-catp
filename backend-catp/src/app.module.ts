@@ -26,27 +26,33 @@ import { AppService } from './app.service';
       inject: [ConfigService], 
       useFactory: (configService: ConfigService) => ({
         type: 'mssql',
-        host: configService.get<string>('DB_HOST'),
-        // 👉 ĐÃ SỬA: Ép kiểu chữ thành số một cách an toàn
+        host: configService.get<string>('DB_HOST') || 'localhost',
+        // Ép kiểu chữ thành số một cách an toàn
         port: parseInt(configService.get<string>('DB_PORT') || '1433', 10),
-        username: configService.get<string>('DB_USER'),
+        username: configService.get<string>('DB_USER') || 'sa',
         password: configService.get<string>('DB_PASSWORD'),
-        database: configService.get<string>('DB_NAME'),
+        database: configService.get<string>('DB_NAME') || 'hethong-catp',
         
-        // 👉 ĐÃ SỬA: Đưa các Entity vào đúng vị trí
+        // Đưa các Entity vào đúng vị trí
         entities: [Report, Unit, News, User],
         
         synchronize: true,
         extra: {
           trustServerCertificate: true,
+          encrypt: false,
+          // Bọc nó vào trong một object 'options' nữa
+          options: {
+            cryptoCredentialsDetails: {
+              minVersion: 'TLSv1',
+            },
+          },
         },
       }),
     }),
     TypeOrmModule.forFeature([User]),
     ReportsModule,
     UnitsModule,
-    UsersModule,
-    NewsModule,TypeOrmModule.forFeature([User]),
+    NewsModule,
     
   ],
   controllers: [AppController], 

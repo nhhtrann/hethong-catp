@@ -2,6 +2,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Layout, Menu, Tag } from 'antd'; // 👉 Đã bỏ Button vì không dùng nút X nữa
 import { useNavigate, useLocation } from 'react-router-dom';
+import { Layout, Menu, Typography, Drawer } from 'antd'; 
+import { 
+  AppstoreOutlined, 
+  MailOutlined, 
+  InboxOutlined, 
+  ProfileOutlined, 
+  UsergroupAddOutlined, 
+  AreaChartOutlined, 
+  ReadOutlined,
+  FileDoneOutlined
+} from '@ant-design/icons';
 
 import {
   DashboardOutlined, InboxOutlined, FileTextOutlined,
@@ -137,6 +148,44 @@ const Sidebar = ({ role }) => {
         />
       </Sider>
     </div>
+  );
+
+  if (isMobile) {
+    return (
+      <Drawer
+        placement="left" 
+        width={260}
+        open={menuVisible}
+        onClose={() => setMenuVisible(false)} 
+        styles={{ body: { padding: 0 } }} 
+        closable={false} 
+      >
+        {SidebarContent}
+      </Drawer>
+    );
+  }
+
+  return (
+    <Sider 
+      width={260} 
+      collapsedWidth={80} 
+      collapsible 
+      collapsed={desktopCollapsed} 
+      trigger={null} 
+      theme="light" 
+      style={{ 
+        overflow: 'auto', 
+        height: '100vh', 
+        position: 'fixed', 
+        left: 0, 
+        top: 0, 
+        bottom: 0,
+        zIndex: 101, 
+        borderRight: '1px solid #f0f0f0' 
+      }}
+    >
+      {SidebarContent}
+    </Sider>
   );
 };
 
