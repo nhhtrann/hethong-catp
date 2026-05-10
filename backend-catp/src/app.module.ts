@@ -38,6 +38,13 @@ import { AppService } from './app.service';
         synchronize: true,
         extra: {
           trustServerCertificate: true,
+          encrypt: false,
+          // Bọc nó vào trong một object 'options' nữa
+          options: {
+            cryptoCredentialsDetails: {
+              minVersion: 'TLSv1',
+            },
+          },
         },
       }),
     }),
