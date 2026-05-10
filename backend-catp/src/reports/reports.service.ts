@@ -23,7 +23,6 @@ export class ReportsService {
 
   // Các hàm này tạm để trống, mình sẽ làm sau
   findOne(id: number) { return `This action returns a #${id} report`; }
-  remove(id: number) { return `This action removes a #${id} report`; }
   
   // Cập nhật dữ liệu dựa theo ID
   async update(id: number, updateData: any) {
@@ -70,5 +69,16 @@ async getStats() {
     chartData
   };
 }
-  
+// Trong file src/reports/reports.service.ts
+  async remove(id: number) {
+    // Gọi lệnh delete của TypeORM để chém bay dòng dữ liệu trong SQL Server
+    const result = await this.reportsRepository.delete(id);
+    
+    if (result.affected === 0) {
+      return { success: false, message: 'Không tìm thấy vụ việc này trong Database!' };
+    }
+    
+    return { success: true, message: 'Đã xóa hoàn toàn khỏi SQL Server!' };
+  }
+
 }

@@ -1,31 +1,68 @@
 // src/pages/ReportDispatch.jsx
 import React, { useState, useEffect } from 'react';
-import { Table, Card, Typography, Input, Space, Button, Select } from 'antd'; 
-import { SearchOutlined, EyeOutlined, DownloadOutlined } from '@ant-design/icons'; 
-import * as XLSX from 'xlsx';
+import { Table, Tag, Card, Typography, Input, Space, Button, Select, Modal, Form, message, Upload, Row, Col } from 'antd'; 
+import { 
+  SearchOutlined, 
+  EyeOutlined, 
+  DownloadOutlined, 
+  PlusOutlined, 
+  DeleteOutlined, 
+  ExclamationCircleOutlined 
+} from '@ant-design/icons';
+
 import ReportDetail from '../pages/ReportDetail';
 
 const { Title } = Typography;
+const { TextArea } = Input;
+const { Option } = Select;
+
+const getBase64 = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = (error) => reject(error);
+  });
 
 const ReportDispatch = () => {
   const [data, setData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   const [searchText, setSearchText] = useState('');
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [selectedRecord, setSelectedRecord] = useState(null);
-  
   const [filterMang, setFilterMang] = useState(null);
   const [filterTrangThai, setFilterTrangThai] = useState(null);
+  const [filterDonVi, setFilterDonVi] = useState('Tất cả'); 
+  
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]); 
+
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState(null);
+
+  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [addForm] = Form.useForm();
+  const [units, setUnits] = useState([]); 
+
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [deletingIds, setDeletingIds] = useState([]);
+  const [previewImage, setPreviewImage] = useState('');
+
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const fetchData = () => {
     fetch('http://localhost:3000/reports')
       .then(res => res.json())
       .then(result => {
         if (Array.isArray(result)) {
-          const formattedData = result.map((item, index) => ({
+          const reversedResult = [...result].reverse();
+          const formattedData = reversedResult.map((item, index) => ({
             id: item.id,
             key: item.id?.toString(),
-            stt: index + 1,
+            stt: index + 1, 
             tieuDe: item.tieuDe,
             mang: item.mangViPham,
             donViXuLy: item.donViXuLy || '',
@@ -33,14 +70,23 @@ const ReportDispatch = () => {
             noiDung: item.noiDung,
             ghiChu: item.ghiChuKetQua,
             anhKetQua: item.anhKetQua,
-            anhKiemChung : item.anhKiemChung, 
+            anhKiemChung: item.anhKiemChung,
             ngayGui: item.ngayGui ? new Date(item.ngayGui).toLocaleDateString('vi-VN') : '',
           }));
-          setData(formattedData);
+          
+          setData(formattedData); 
           setFilteredData(formattedData);
         }
       })
       .catch(error => console.error('Lỗi khi gọi API:', error));
+fetch('http://localhost:3000/units')
+      .then(res => res.json())
+      .then(result => Array.isArray(result) && setUnits(result))
+      .catch(err => console.error(err));
+  };
+
+  useEffect(() => {
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -53,147 +99,244 @@ const ReportDispatch = () => {
         item.noiDung?.toLowerCase().includes(lowercasedFilter)
       );
     }
-
+    
     if (filterMang && filterMang !== 'Tất cả') {
       result = result.filter(item => item.mang === filterMang);
     }
-
+    
     if (filterTrangThai && filterTrangThai !== 'Tất cả') {
       result = result.filter(item => item.trangThai === filterTrangThai);
     }
 
+    if (filterDonVi && filterDonVi !== 'Tất cả') {
+      if (filterDonVi === 'Chưa phân công') {
+        result = result.filter(item => !item.donViXuLy || item.donViXuLy === '');
+      } else {
+        result = result.filter(item => item.donViXuLy === filterDonVi);
+      }
+    }
+
     setFilteredData(result);
-  }, [searchText, filterMang, filterTrangThai, data]);
+  }, [searchText, filterMang, filterTrangThai, filterDonVi, data]);
+
+  const handleBeforeUpload = async (file) => {
+    const isLt5M = file.size / 1024 / 1024 < 5;
+    if (!isLt5M) {
+      message.error('Kích thước ảnh phải nhỏ hơn 5MB!');
+      return Upload.LIST_IGNORE;
+    }
+    const base64 = await getBase64(file);
+    setPreviewImage(base64);
+    return false; 
+  };
+
+  const handleAddReport = async (values) => {
+    try {
+      const response = await fetch('http://localhost:3000/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...values,
+          anhKiemChung: previewImage, 
+          trangThai: 'Mới', 
+          ngayGui: new Date().toISOString(),
+        })
+      });
+
+      if (response.ok) {
+        message.success('Đã thêm phản ánh mới thành công!');
+        setIsAddModalVisible(false);
+        addForm.resetFields();
+        fetchData();
+      } else {
+        message.error('Lỗi khi thêm phản ánh!');
+      }
+    } catch (error) {
+      message.error('Không kết nối được với Server!');
+    }
+  };
+
+  const confirmDelete = (ids) => {
+    setDeletingIds(ids);
+    setIsDeleteModalVisible(true);
+  };
+
+  const executeDelete = async () => {
+    try {
+      const responses = await Promise.all(deletingIds.map(id => 
+        fetch(`http://localhost:3000/reports/${id}`, { method: 'DELETE' })
+      ));
+
+      const allOk = responses.every(res => res.ok);
+
+      if (allOk) {
+        message.success(`Đã xóa thành công ${deletingIds.length} phản ánh!`);
+        setIsDeleteModalVisible(false);
+        setSelectedRowKeys([]);
+        fetchData();
+      } else {
+        message.error('Lỗi: Backend từ chối xóa!');
+      }
+    } catch (error) {
+message.error('Lỗi kết nối mạng khi xóa!');
+    }
+  };
 
   const handleExport = () => {
-    const exportData = filteredData.map((item, index) => ({
-      'STT': index + 1,
-      'Tiêu đề vụ việc': item.tieuDe,
-      'Mảng vi phạm': item.mang,
-      'Ngày gửi': item.ngayGui,
-      'Đơn vị xử lý': item.donViXuLy ? `Đơn vị số ${item.donViXuLy}` : 'Chưa phân công',
-      'Trạng thái': item.trangThai?.toUpperCase()
-    }));
+    const headers = ['STT', 'Tiêu đề', 'Mảng vi phạm', 'Ngày gửi', 'Đơn vị xử lý', 'Trạng thái'];
+    const rows = filteredData.map((item, index) => [
+      index + 1, `"${item.tieuDe}"`, `"${item.mang}"`, `"${item.ngayGui}"`, `"${item.donViXuLy}"`, `"${item.trangThai}"`
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + [headers.join(','), ...rows.map(e => e.join(','))].join("\n");
+    const link = document.createElement("a");
+    link.setAttribute("href", encodeURI(csvContent));
+    link.setAttribute("download", "DanhSachPhanAnh.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const columnWidths = [{ wch: 5 }, { wch: 45 }, { wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 15 }];
-    worksheet['!cols'] = columnWidths;
-
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Danh_Sach_Phan_Anh");
-    XLSX.writeFile(workbook, "Bao_Cao_CATP.xlsx");
+  const rowSelection = {
+    selectedRowKeys,
+    onChange: (newSelectedRowKeys) => setSelectedRowKeys(newSelectedRowKeys),
+    fixed: isMobile ? false : 'left',
+    columnWidth: 40,
   };
 
   const columns = [
     { title: 'STT', dataIndex: 'stt', key: 'stt', width: 60, align: 'center' },
-    { 
-      title: 'Tiêu đề vụ việc', 
-      dataIndex: 'tieuDe', 
-      key: 'tieuDe', 
-      width: '30%',
-      render: (text) => <span style={{ fontWeight: 600, color: '#1f2937' }}>{text}</span>
-    },
-    { title: 'Mảng vi phạm', dataIndex: 'mang', key: 'mang', width: '15%' },
-    { title: 'Ngày gửi', dataIndex: 'ngayGui', key: 'ngayGui', width: '12%' },
+    { title: 'Tiêu đề vụ việc', dataIndex: 'tieuDe', key: 'tieuDe', width: 250, ellipsis: true, align: 'center' },
+    { title: 'Mảng vi phạm', dataIndex: 'mang', key: 'mang', width: 140, align: 'center' },
+    { title: 'Ngày gửi', dataIndex: 'ngayGui', key: 'ngayGui', width: 120, align: 'center' },
     { 
       title: 'Đơn vị xử lý', 
       dataIndex: 'donViXuLy', 
       key: 'donViXuLy',
-      // 🟢 Ép buộc dùng thẻ div và CSS gốc để lên màu chuẩn
-      render: (val) => val ? (
-        <div style={{ 
-          backgroundColor: '#f1f5f9', 
-          color: '#334155', 
-          padding: '4px 10px', 
-          borderRadius: '4px', 
-          fontWeight: 600, 
-          display: 'inline-block' 
-        }}>
-          {val}
-        </div>
-      ) : <span style={{ color: '#9ca3af' }}>Chưa phân công</span>
+      width: 200,
+      align: 'center',
+      render: (val) => val ? <b style={{ color: '#1890ff' }}>{val}</b> : <span style={{ color: '#999' }}>Chưa phân công</span>
     },
     {
       title: 'Trạng thái',
       key: 'trangThai',
       dataIndex: 'trangThai',
+      width: 140,
+      align: 'center',
       render: (trangThai) => {
-        let bgColor = '#e5e7eb'; 
-        let textColor = '#374151'; 
-        
-        let text = trangThai ? trangThai.normalize('NFC').toUpperCase().trim() : '';
-        
-        // 🟢 Cấu hình màu nền đặc (Solid Background)
-        if (text.includes('MỚI') || text.includes('CHƯA')) { bgColor = '#f97316'; textColor = '#fff'; } 
-        else if (text.includes('ĐANG')) { bgColor = '#3b82f6'; textColor = '#fff'; } 
-        else if (text.includes('ĐÃ') || text.includes('HOÀN')) { bgColor = '#10b981'; textColor = '#fff'; } 
-        else if (text.includes('CHỜ')) { bgColor = '#8b5cf6'; textColor = '#fff'; } 
-        
-        // 🟢 Ép buộc dùng CSS gốc, từ chối thư viện Ant Design can thiệp
-        return (
-          <div style={{ 
-            backgroundColor: bgColor, 
-            color: textColor, 
-            padding: '4px 12px', 
-            borderRadius: '4px', 
-            fontWeight: '600',
-            fontSize: '12px',
-            display: 'inline-block',
-            textAlign: 'center',
-            minWidth: '90px'
-          }}>
-            {text}
-          </div>
-        );
+        let color = trangThai === 'Mới' ? 'volcano' : (trangThai === 'Đang xử lý' ? 'gold' : (trangThai === 'Chờ duyệt' ? 'blue' : 'green'));
+        return <Tag color={color}>{trangThai?.toUpperCase()}</Tag>;
       },
     },
     {
-      title: 'Thao tác',
+      title: 'Hành động',
       key: 'action',
+      fixed: 'right', // 👉 ĐÃ SỬA: Ghim lại cột hành động bên phải
+      width: 80,
       align: 'center',
       render: (_, record) => (
-        <Button 
-          type="primary" 
-          icon={<EyeOutlined />} 
-          onClick={() => {
-            setSelectedRecord(record);
-            setIsModalVisible(true);
-          }}
-          style={{ padding: '0 12px', fontSize: '13px' }}
-        >
-          Điều phối
-        </Button>
+        <Space size={0}>
+          <Button 
+            type="text" size="small"
+            icon={<EyeOutlined style={{ color: '#1890ff', fontSize: '16px' }} />} 
+            onClick={() => { setSelectedRecord(record); setIsModalVisible(true); }}
+          />
+          <Button 
+            type="text" size="small"
+            icon={<DeleteOutlined style={{ color: '#ff4d4f', fontSize: '16px' }} />} 
+            onClick={() => confirmDelete([record.id])} 
+          />
+        </Space>
       ),
     },
   ];
 
   return (
-    <div style={{ padding: '24px' }}>
-      <Title level={2} style={{ marginTop: 0, fontWeight: 700, color: '#1e293b' }}>Tiếp nhận & Điều phối phản ánh</Title>
+    <div style={{ padding: 'clamp(10px, 2vw, 24px)', overflowX: 'hidden' }}>
+      
+      {/* 👉 ĐÃ SỬA: Bố cục Header Text ở giữa, Nút bám lề phải */}
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: isMobile ? 'column' : 'row', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        position: 'relative',     
+        marginBottom: '24px',
+        gap: '16px'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <Title level={2} style={{ margin: 0, fontSize: 'clamp(20px, 4vw, 28px)' }}>
+            Tiếp nhận & Điều phối phản ánh
+          </Title>
+        </div>
 
-      <Card bordered={false} style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+        {/* Căn sát phải trên PC, và căn lề phải trên Mobile */}
+        <div style={{ 
+          position: isMobile ? 'static' : 'absolute', 
+          right: 0, 
+          top: '50%', 
+          transform: isMobile ? 'none' : 'translateY(-50%)',
+          alignSelf: isMobile ? 'flex-end' : 'auto' // Bám lề phải
+        }}>
+          <Space wrap style={{ justifyContent: 'flex-end' }}>
+            {selectedRowKeys.length > 0 && (
+              <Button danger icon={<DeleteOutlined />} onClick={() => confirmDelete(selectedRowKeys)}>
+                Xóa {selectedRowKeys.length} mục
+              </Button>
+            )}
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsAddModalVisible(true)}>
+              Thêm phản ánh
+            </Button>
+          </Space>
+        </div>
+      </div>
+
+      <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
         
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: '15px' }}>
-          <Space wrap style={{ flex: 1 }}>
-            <Input placeholder="Tìm kiếm tiêu đề, nội dung..." prefix={<SearchOutlined />} style={{ width: '100%', minWidth: 200, maxWidth: 250 }} onChange={(e) => setSearchText(e.target.value)} />
-            <Select defaultValue="Tất cả" style={{ width: 140 }} onChange={(value) => setFilterMang(value)}>
-              <Select.Option value="Tất cả">Tất cả mảng</Select.Option>
-              <Select.Option value="Giao thông">Giao thông</Select.Option>
-              <Select.Option value="Bạo lực">Bạo lực</Select.Option>
-              <Select.Option value="Ma túy">Ma túy</Select.Option>
-              <Select.Option value="An ninh Trật tự">An ninh Trật tự</Select.Option>
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: isMobile ? 'column' : 'row', 
+          justifyContent: 'space-between', 
+          alignItems: 'flex-start', 
+          marginBottom: 20, 
+          gap: '16px' 
+        }}>
+          <Space wrap style={{ flex: 1, width: '100%' }}>
+            <Input 
+              placeholder="Tìm tiêu đề, nội dung..." 
+              prefix={<SearchOutlined />} 
+              style={{ width: '100%', minWidth: '200px', maxWidth: '280px' }}
+              onChange={(e) => setSearchText(e.target.value)}
+            />
+            <Select defaultValue="Tất cả" style={{ width: '100%', minWidth: '130px', maxWidth: '160px' }} onChange={setFilterMang}>
+              <Option value="Tất cả">Tất cả mảng</Option>
+              <Option value="Giao thông">Giao thông</Option>
+              <Option value="Bạo lực">Bạo lực</Option>
+              <Option value="Ma túy">Ma túy</Option>
+              <Option value="An ninh Trật tự">An ninh Trật tự</Option>
             </Select>
-            <Select defaultValue="Tất cả" style={{ width: 160 }} onChange={(value) => setFilterTrangThai(value)}>
-              <Select.Option value="Tất cả">Tất cả trạng thái</Select.Option>
-              <Select.Option value="Mới">Mới</Select.Option>
-              <Select.Option value="Đang xử lý">Đang xử lý</Select.Option>
-              <Select.Option value="Chờ duyệt">Chờ duyệt</Select.Option>
-              <Select.Option value="Hoàn thành">Hoàn thành</Select.Option>
-              <Select.Option value="Trễ hạn">Trễ hạn</Select.Option>
+            <Select defaultValue="Tất cả" style={{ width: '100%', minWidth: '150px', maxWidth: '180px' }} onChange={setFilterTrangThai}>
+              <Option value="Tất cả">Tất cả trạng thái</Option>
+              <Option value="Mới">Mới</Option>
+              <Option value="Đang xử lý">Đang xử lý</Option>
+              <Option value="Chờ duyệt">Chờ duyệt</Option>
+              <Option value="Hoàn thành">Hoàn thành</Option>
+<Option value="Trễ hạn">Trễ hạn</Option>
+            </Select>
+            <Select defaultValue="Tất cả" style={{ width: '100%', minWidth: '160px', maxWidth: '220px' }} onChange={setFilterDonVi}>
+              <Option value="Tất cả">Tất cả đơn vị</Option>
+                {units.map(u => (
+                <Option key={u.id} value={u.tenDonVi}>{u.tenDonVi}</Option>
+                ))}
+                <Option value="Chưa phân công">Chưa phân công</Option>
             </Select>
           </Space>
 
-          <Button type="primary" icon={<DownloadOutlined />} onClick={handleExport}>
+          <Button 
+            type="default" 
+            icon={<DownloadOutlined />} 
+            onClick={handleExport} 
+            style={{ borderColor: '#10b981', color: '#10b981', width: isMobile ? '100%' : 'auto' }}
+          >
             Xuất dữ liệu
           </Button>
         </div>
@@ -201,9 +344,16 @@ const ReportDispatch = () => {
         <Table 
           columns={columns} 
           dataSource={filteredData} 
-          scroll={{ x: 800 }} 
-          size="middle" 
-          style={{ border: '1px solid #f0f0f0', borderRadius: '4px' }}
+          rowSelection={rowSelection}
+          scroll={{ x: 1200 }} 
+          bordered
+          // 👉 ĐÃ SỬA: Cấu hình phân trang chống rớt dòng cho Mobile
+          pagination={{ 
+            pageSize: 8,
+            showSizeChanger: false, // Tắt cái "Hiển thị 10 / trang"
+            showLessItems: true,    // Rút gọn các số ở giữa thành dấu ...
+            simple: isMobile        // Nếu là điện thoại, tự chuyển sang chế độ < 1 / 8 > siêu gọn
+          }}
         />
       </Card>
       
@@ -213,6 +363,95 @@ const ReportDispatch = () => {
         data={selectedRecord} 
         mode="admin" 
       />
+
+      <Modal
+        title="Thêm Phản ánh Mới"
+        open={isAddModalVisible}
+        onCancel={() => setIsAddModalVisible(false)}
+        onOk={() => addForm.submit()}
+        okText="Lưu phản ánh"
+        cancelText="Hủy"
+        width={700}
+        centered
+      >
+        <Form form={addForm} layout="vertical" onFinish={handleAddReport}>
+          
+          <Row gutter={16}>
+            <Col xs={24} md={16}>
+              <Form.Item name="tieuDe" label="Tiêu đề vụ việc" rules={[{ required: true }]}>
+                <Input placeholder="Ví dụ: Lấn chiếm lòng lề đường..." />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item name="mangViPham" label="Mảng vi phạm" rules={[{ required: true }]}>
+                <Select placeholder="Chọn mảng">
+                  <Option value="Trật tự đô thị">Trật tự đô thị</Option>
+                  <Option value="Giao thông">Giao thông</Option>
+                  <Option value="Môi trường">Môi trường</Option>
+                  <Option value="Khác">Khác</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item name="noiDung" label="Nội dung chi tiết" rules={[{ required: true }]}>
+<TextArea rows={4} placeholder="Mô tả chi tiết tình hình..." />
+          </Form.Item>
+          
+          <Form.Item label="Ảnh minh chứng (Nếu có)">
+            <Upload
+              listType="picture-card"
+              showUploadList={false} 
+              beforeUpload={handleBeforeUpload}
+              accept="image/*"
+            >
+              {previewImage ? (
+                <img src={previewImage} alt="minh chứng" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
+              ) : (
+                <div>
+                  <PlusOutlined style={{ fontSize: '24px', color: '#8c8c8c' }} />
+                  <div style={{ marginTop: 8, color: '#8c8c8c' }}>Tải ảnh lên</div>
+                </div>
+              )}
+            </Upload>
+          </Form.Item>
+
+          <Row gutter={16}>
+            <Col xs={24} md={12}>
+              <Form.Item name="nguoiPhanAnh" label="Người phản ánh (Nếu có)">
+                <Input placeholder="Tên người gọi/báo tin" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="soDienThoai" label="Số điện thoại">
+                <Input placeholder="Số điện thoại liên hệ" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item name="donViXuLy" label="Phân công cho Đơn vị (Có thể chọn sau)">
+            <Select placeholder="-- Chọn Đơn vị tiếp nhận --" allowClear>
+              {units.map(u => (
+                <Option key={u.id} value={u.tenDonVi}>{u.tenDonVi}</Option>
+              ))}
+            </Select>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title={<span><ExclamationCircleOutlined style={{ color: '#ff4d4f', marginRight: 8 }} />Xác nhận xóa</span>}
+        open={isDeleteModalVisible}
+        onOk={executeDelete}
+        onCancel={() => setIsDeleteModalVisible(false)}
+        okText="Xóa"
+        cancelText="Hủy"
+        okButtonProps={{ danger: true }}
+        centered
+      >
+        <p>Bạn có chắc chắn muốn xóa <b>{deletingIds.length}</b> phản ánh này không?</p>
+      </Modal>
+
     </div>
   );
 };

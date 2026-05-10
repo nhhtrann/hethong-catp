@@ -33,10 +33,11 @@ export class ReportsController {
     return this.reportsService.update(+id, updateReportDto);
   }
 
+ // Trong file src/reports/reports.controller.ts
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.reportsService.remove(+id);
+    // Dấu + ở trước id là để ép kiểu chuỗi thành số (number)
+    return this.reportsService.remove(+id); 
   }
-
 
 }

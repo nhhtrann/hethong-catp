@@ -11,7 +11,8 @@ export class News {
   @Column('text') // Dùng 'text' vì nội dung bài viết thường rất dài
   noiDung: string;
 
-  @Column({ nullable: true })
+  // Trong file news.entity.ts
+  @Column({ type: 'nvarchar', length: 'max', nullable: true })
   hinhAnh: string;
 
   @Column({ default: 'Ban Tiếp nhận CATP' })

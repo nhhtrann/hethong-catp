@@ -23,9 +23,6 @@ export class Report {
   @Column({ nullable: true })
   ghiChuKetQua: string; // Lưu ghi chú của Công an
 
-  @Column({ type: 'nvarchar', length: 'MAX', nullable: true })
-  anhKetQua: string; // Lưu danh sách tên/link ảnh (dạng chuỗi JSON)
-  
   @CreateDateColumn() // Tự động lấy giờ hệ thống khi insert
   ngayGui: Date;
 
@@ -35,5 +32,8 @@ export class Report {
   
   @Column({ type: 'nvarchar', length: 'max', nullable: true })
   anhKiemChung: string;
+
+  @Column({ type: 'nvarchar', length: 'max', nullable: true })
+  anhKetQua: string;
   
 }
