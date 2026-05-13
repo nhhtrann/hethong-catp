@@ -155,3 +155,17 @@ body {
   box-shadow: none !important;
   outline: none !important;
 }
+
+/* Tiêu diệt "Hàng ma" (Measure Row) bị phồng lên ở đầu bảng Ant Design */
+.ant-table-measure-row {
+  visibility: collapse !important;
+  height: 0 !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+}
+
+.ant-table-measure-row td {
+  padding: 0 !important;
+  border: none !important;
+  height: 0 !important;
+}

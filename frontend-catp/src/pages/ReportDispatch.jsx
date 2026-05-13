@@ -46,6 +46,9 @@ const ReportDispatch = () => {
   const [previewImage, setPreviewImage] = useState('');
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  
+  // 👉 BỔ SUNG: State theo dõi trang hiện tại
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -62,7 +65,6 @@ const ReportDispatch = () => {
           const formattedData = reversedResult.map((item, index) => ({
             id: item.id,
             key: item.id?.toString(),
-            stt: index + 1, 
             tieuDe: item.tieuDe,
             mang: item.mangViPham,
             donViXuLy: item.donViXuLy || '',
@@ -79,7 +81,8 @@ const ReportDispatch = () => {
         }
       })
       .catch(error => console.error('Lỗi khi gọi API:', error));
-fetch('http://localhost:3000/units')
+      
+    fetch('http://localhost:3000/units')
       .then(res => res.json())
       .then(result => Array.isArray(result) && setUnits(result))
       .catch(err => console.error(err));
@@ -117,6 +120,8 @@ fetch('http://localhost:3000/units')
     }
 
     setFilteredData(result);
+    // 👉 BỔ SUNG: Reset về trang 1 khi lọc
+    setCurrentPage(1);
   }, [searchText, filterMang, filterTrangThai, filterDonVi, data]);
 
   const handleBeforeUpload = async (file) => {
@@ -178,7 +183,7 @@ fetch('http://localhost:3000/units')
         message.error('Lỗi: Backend từ chối xóa!');
       }
     } catch (error) {
-message.error('Lỗi kết nối mạng khi xóa!');
+      message.error('Lỗi kết nối mạng khi xóa!');
     }
   };
 
@@ -204,7 +209,8 @@ message.error('Lỗi kết nối mạng khi xóa!');
   };
 
   const columns = [
-    { title: 'STT', dataIndex: 'stt', key: 'stt', width: 60, align: 'center' },
+    // 👉 ĐÃ SỬA: Render STT dựa theo currentPage
+    { title: 'STT', key: 'stt', width: 60, align: 'center', render: (text, record, index) => (currentPage - 1) * 8 + index + 1 },
     { title: 'Tiêu đề vụ việc', dataIndex: 'tieuDe', key: 'tieuDe', width: 250, ellipsis: true, align: 'center' },
     { title: 'Mảng vi phạm', dataIndex: 'mang', key: 'mang', width: 140, align: 'center' },
     { title: 'Ngày gửi', dataIndex: 'ngayGui', key: 'ngayGui', width: 120, align: 'center' },
@@ -230,7 +236,7 @@ message.error('Lỗi kết nối mạng khi xóa!');
     {
       title: 'Hành động',
       key: 'action',
-      fixed: 'right', // 👉 ĐÃ SỬA: Ghim lại cột hành động bên phải
+      fixed: 'right', 
       width: 80,
       align: 'center',
       render: (_, record) => (
@@ -250,10 +256,20 @@ message.error('Lỗi kết nối mạng khi xóa!');
     },
   ];
 
+  // 👉 BỔ SUNG: Hàm chọn tất cả dữ liệu qua các trang
+  const handleSelectAllAcrossPages = () => {
+    const allKeys = filteredData.map(item => item.key);
+    setSelectedRowKeys(allKeys);
+  };
+
   return (
-    <div style={{ padding: 'clamp(10px, 2vw, 24px)', overflowX: 'hidden' }}>
+    <div style={{ 
+      padding: 'clamp(10px, 2vw, 24px)', 
+      maxWidth: '1300px', // 👉 SỬA: Đổi 1300 thành 1400 để đồng bộ kích thước khung với Quản lý Đơn vị
+      margin: '0 auto',   
+      overflowX: 'hidden' 
+    }}>
       
-      {/* 👉 ĐÃ SỬA: Bố cục Header Text ở giữa, Nút bám lề phải */}
       <div style={{ 
         display: 'flex', 
         flexDirection: isMobile ? 'column' : 'row', 
@@ -269,13 +285,12 @@ message.error('Lỗi kết nối mạng khi xóa!');
           </Title>
         </div>
 
-        {/* Căn sát phải trên PC, và căn lề phải trên Mobile */}
         <div style={{ 
           position: isMobile ? 'static' : 'absolute', 
           right: 0, 
           top: '50%', 
           transform: isMobile ? 'none' : 'translateY(-50%)',
-          alignSelf: isMobile ? 'flex-end' : 'auto' // Bám lề phải
+          alignSelf: isMobile ? 'flex-end' : 'auto' 
         }}>
           <Space wrap style={{ justifyContent: 'flex-end' }}>
             {selectedRowKeys.length > 0 && (
@@ -305,30 +320,43 @@ message.error('Lỗi kết nối mạng khi xóa!');
               placeholder="Tìm tiêu đề, nội dung..." 
               prefix={<SearchOutlined />} 
               style={{ width: '100%', minWidth: '200px', maxWidth: '280px' }}
+              value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
             />
-            <Select defaultValue="Tất cả" style={{ width: '100%', minWidth: '130px', maxWidth: '160px' }} onChange={setFilterMang}>
+            <Select value={filterMang || 'Tất cả'} style={{ width: '100%', minWidth: '130px', maxWidth: '160px' }} onChange={setFilterMang}>
               <Option value="Tất cả">Tất cả mảng</Option>
               <Option value="Giao thông">Giao thông</Option>
               <Option value="Bạo lực">Bạo lực</Option>
               <Option value="Ma túy">Ma túy</Option>
               <Option value="An ninh Trật tự">An ninh Trật tự</Option>
             </Select>
-            <Select defaultValue="Tất cả" style={{ width: '100%', minWidth: '150px', maxWidth: '180px' }} onChange={setFilterTrangThai}>
+            <Select value={filterTrangThai || 'Tất cả'} style={{ width: '100%', minWidth: '150px', maxWidth: '180px' }} onChange={setFilterTrangThai}>
               <Option value="Tất cả">Tất cả trạng thái</Option>
               <Option value="Mới">Mới</Option>
               <Option value="Đang xử lý">Đang xử lý</Option>
               <Option value="Chờ duyệt">Chờ duyệt</Option>
               <Option value="Hoàn thành">Hoàn thành</Option>
-<Option value="Trễ hạn">Trễ hạn</Option>
+              <Option value="Trễ hạn">Trễ hạn</Option>
             </Select>
-            <Select defaultValue="Tất cả" style={{ width: '100%', minWidth: '160px', maxWidth: '220px' }} onChange={setFilterDonVi}>
+            <Select value={filterDonVi} style={{ width: '100%', minWidth: '160px', maxWidth: '220px' }} onChange={setFilterDonVi}>
               <Option value="Tất cả">Tất cả đơn vị</Option>
                 {units.map(u => (
                 <Option key={u.id} value={u.tenDonVi}>{u.tenDonVi}</Option>
                 ))}
                 <Option value="Chưa phân công">Chưa phân công</Option>
             </Select>
+
+            {/* Thêm nút Bỏ lọc để tiện sử dụng */}
+            {(searchText || filterMang !== 'Tất cả' || filterTrangThai !== 'Tất cả' || filterDonVi !== 'Tất cả') && (
+              <Button type="link" onClick={() => {
+                setSearchText('');
+                setFilterMang('Tất cả');
+                setFilterTrangThai('Tất cả');
+                setFilterDonVi('Tất cả');
+              }}>
+                Bỏ lọc
+              </Button>
+            )}
           </Space>
 
           <Button 
@@ -341,18 +369,63 @@ message.error('Lỗi kết nối mạng khi xóa!');
           </Button>
         </div>
 
+        {/* 👉 BỔ SUNG: Thanh banner thông báo CHỌN TẤT CẢ */}
+        {selectedRowKeys.length > 0 && (
+          <div style={{ 
+            backgroundColor: '#e6f4ff', 
+            border: '1px solid #91caff', 
+            borderRadius: '6px', 
+            padding: '8px 16px', 
+            marginBottom: '16px', 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '10px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <Tag 
+                closable 
+                onClose={() => setSelectedRowKeys([])}
+                color="blue" 
+                style={{ fontSize: '14px', padding: '2px 8px', margin: 0 }}
+              >
+                Đã chọn {selectedRowKeys.length}
+              </Tag>
+              <span style={{ marginLeft: '12px', color: '#595959', fontSize: '14px' }}>
+                {selectedRowKeys.length === filteredData.length 
+                  ? 'Bạn đã chọn toàn bộ dữ liệu.' 
+                  : `Bạn đang chọn ${selectedRowKeys.length} phản ánh.`}
+              </span>
+            </div>
+            
+            {selectedRowKeys.length < filteredData.length && (
+              <Button 
+                type="link" 
+                onClick={handleSelectAllAcrossPages} 
+                style={{ padding: 0, fontWeight: '500', fontSize: '14px' }}
+              >
+                Chọn tất cả {filteredData.length} phản ánh trong danh sách này
+              </Button>
+            )}
+          </div>
+        )}
+
         <Table 
+          size="middle"
           columns={columns} 
           dataSource={filteredData} 
           rowSelection={rowSelection}
           scroll={{ x: 1200 }} 
           bordered
-          // 👉 ĐÃ SỬA: Cấu hình phân trang chống rớt dòng cho Mobile
+          // 👉 BỔ SUNG: Map state currentPage vào Pagination
           pagination={{ 
             pageSize: 8,
-            showSizeChanger: false, // Tắt cái "Hiển thị 10 / trang"
-            showLessItems: true,    // Rút gọn các số ở giữa thành dấu ...
-            simple: isMobile        // Nếu là điện thoại, tự chuyển sang chế độ < 1 / 8 > siêu gọn
+            showSizeChanger: false,
+            showLessItems: true,
+            simple: isMobile,
+            current: currentPage,
+            onChange: (page) => setCurrentPage(page)
           }}
         />
       </Card>
@@ -395,7 +468,7 @@ message.error('Lỗi kết nối mạng khi xóa!');
           </Row>
 
           <Form.Item name="noiDung" label="Nội dung chi tiết" rules={[{ required: true }]}>
-<TextArea rows={4} placeholder="Mô tả chi tiết tình hình..." />
+            <TextArea rows={4} placeholder="Mô tả chi tiết tình hình..." />
           </Form.Item>
           
           <Form.Item label="Ảnh minh chứng (Nếu có)">

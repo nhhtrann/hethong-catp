@@ -28,7 +28,6 @@ const PublicAwareness = () => {
   
   const [searchText, setSearchText] = useState('');
   const [filterTacGia, setFilterTacGia] = useState('Tất cả');
-  // 👉 ĐÃ SỬA: Tách thành 2 biến riêng biệt
   const [tuNgay, setTuNgay] = useState(null);
   const [denNgay, setDenNgay] = useState(null);
 
@@ -104,7 +103,7 @@ const PublicAwareness = () => {
     }
 
     setFilteredData(result);
-    setCurrentPage(1); // 👉 BỔ SUNG: Ép bảng quay về trang 1 và đếm STT lại từ 1 mỗi khi lọc
+    setCurrentPage(1); 
   }, [searchText, filterTacGia, tuNgay, denNgay, data]);
 
   const authors = ['Tất cả', ...new Set(data.map(item => item.tacGia).filter(Boolean))];
@@ -190,12 +189,11 @@ const PublicAwareness = () => {
 
   const rowSelection = {
     selectedRowKeys,
-onChange: (newSelectedRowKeys) => setSelectedRowKeys(newSelectedRowKeys),
+    onChange: (newSelectedRowKeys) => setSelectedRowKeys(newSelectedRowKeys),
     fixed: isMobile ? false : 'left', 
     columnWidth: 40,
   };
 
-  // 👉 ĐÃ SỬA: Ép toàn bộ text căn giữa (align: 'center')
   const columns = [
     { title: 'STT', 
       key: 'stt', 
@@ -231,11 +229,10 @@ onChange: (newSelectedRowKeys) => setSelectedRowKeys(newSelectedRowKeys),
     {
       title: 'Hành động',
       key: 'action',
-      fixed: 'right', // 👉 ĐÃ SỬA: Ghim chết bên phải
-      width: 95,      // 👉 ĐÃ SỬA: Ép cân cho cột nhỏ lại hết cỡ
+      fixed: 'right', 
+      width: 95,      
       align: 'center',
       render: (_, record) => (
-        // Dùng size=0 để các nút đứng sát rạt vào nhau, tiết kiệm diện tích
         <Space size={0}>
           <Button type="text" size="small" icon={<EyeOutlined style={{ color: '#10b981', fontSize: '16px' }} />} onClick={() => { setViewingNews(record); setIsViewModalVisible(true); }} title="Xem bài" />
           <Button type="text" size="small" icon={<EditOutlined style={{ color: '#1890ff', fontSize: '16px' }} />} onClick={() => openEditModal(record)} title="Sửa bài" />
@@ -245,23 +242,31 @@ onChange: (newSelectedRowKeys) => setSelectedRowKeys(newSelectedRowKeys),
     },
   ];
 
+  // 👉 BỔ SUNG: Hàm chọn tất cả dữ liệu qua các trang
+  const handleSelectAllAcrossPages = () => {
+    const allKeys = filteredData.map(item => item.key);
+    setSelectedRowKeys(allKeys);
+  };
+
   return (
-    <div style={{ padding: 'clamp(10px, 2vw, 24px)', overflowX: 'hidden' }}>
+    <div style={{ 
+      padding: 'clamp(10px, 2vw, 24px)', 
+      maxWidth: '1300px', // 👉 Ép khung rộng để có khoảng hở 2 bên
+      margin: '0 auto', 
+      overflowX: 'hidden' 
+    }}>
       
-      {/* 👉 ĐÃ SỬA: Bố cục Header mới: Text ở giữa, Nút ở góc phải */}
       <div style={{ 
         display: 'flex', 
         flexDirection: isMobile ? 'column' : 'row', 
-        justifyContent: 'center', // Canh giữa theo chiều ngang
+        justifyContent: 'center', 
         alignItems: 'center', 
-        position: 'relative',     // Làm gốc tọa độ cho cái Nút
+        position: 'relative',    
         marginBottom: '24px',
         gap: '16px'
       }}>
         
-        {/* KHỐI TEXT CHÍNH GIỮA */}
         <div style={{ textAlign: 'center' }}>
-          {/* Chữ to hơn 1 xíu (clamp tự tăng kích thước trên PC) */}
           <Title level={2} style={{ margin: 0, fontSize: 'clamp(24px, 5vw, 36px)' }}>
             Tuyên truyền & Cảnh báo
           </Title>
@@ -270,7 +275,6 @@ onChange: (newSelectedRowKeys) => setSelectedRowKeys(newSelectedRowKeys),
           </Text>
         </div>
 
-        {/* NÚT BẤM (Bay sang góc phải trên PC, rớt xuống giữa trên Mobile) */}
         <div style={{ 
           position: isMobile ? 'static' : 'absolute', 
           right: 0, 
@@ -342,15 +346,14 @@ onChange: (newSelectedRowKeys) => setSelectedRowKeys(newSelectedRowKeys),
               />
             </div>
 
-            {/* 👉 ĐÃ SỬA: Cập nhật lại nút Bỏ lọc */}
             {(searchText || filterTacGia !== 'Tất cả' || tuNgay || denNgay) && (
               <Button 
                 type="link" 
                 onClick={() => {
                   setSearchText('');
                   setFilterTacGia('Tất cả');
-                  setTuNgay(null); // Xóa Từ ngày
-                  setDenNgay(null); // Xóa Đến ngày
+                  setTuNgay(null); 
+                  setDenNgay(null); 
                 }}
               >
                 Bỏ lọc
@@ -359,7 +362,50 @@ onChange: (newSelectedRowKeys) => setSelectedRowKeys(newSelectedRowKeys),
           </Space>
         </div>
 
+        {/* 👉 BỔ SUNG: Thanh banner thông báo CHỌN TẤT CẢ giống các trang khác */}
+        {selectedRowKeys.length > 0 && (
+          <div style={{ 
+            backgroundColor: '#e6f4ff', 
+            border: '1px solid #91caff', 
+            borderRadius: '6px', 
+            padding: '8px 16px', 
+            marginBottom: '16px', 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '10px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <Tag 
+                closable 
+                onClose={() => setSelectedRowKeys([])}
+                color="blue" 
+                style={{ fontSize: '14px', padding: '2px 8px', margin: 0 }}
+              >
+                Đã chọn {selectedRowKeys.length}
+              </Tag>
+              <span style={{ marginLeft: '12px', color: '#595959', fontSize: '14px' }}>
+                {selectedRowKeys.length === filteredData.length 
+                  ? 'Bạn đã chọn toàn bộ dữ liệu.' 
+                  : `Bạn đang chọn ${selectedRowKeys.length} bài viết.`}
+              </span>
+            </div>
+            
+            {selectedRowKeys.length < filteredData.length && (
+              <Button 
+                type="link" 
+                onClick={handleSelectAllAcrossPages} 
+                style={{ padding: 0, fontWeight: '500', fontSize: '14px' }}
+              >
+                Chọn tất cả {filteredData.length} bài viết trong danh sách này
+              </Button>
+            )}
+          </div>
+        )}
+
         <Table 
+          size="middle" // 👉 BỔ SUNG: Thu nhỏ khoảng trắng thừa giữa các hàng
           columns={columns} 
           dataSource={filteredData} 
           rowSelection={rowSelection}
@@ -367,8 +413,8 @@ onChange: (newSelectedRowKeys) => setSelectedRowKeys(newSelectedRowKeys),
           bordered
           pagination={{ 
             pageSize: 8,
-            current: currentPage, // 👉 BỔ SUNG
-            onChange: (page) => setCurrentPage(page) // 👉 BỔ SUNG
+            current: currentPage, 
+            onChange: (page) => setCurrentPage(page) 
           }}
         />
       </Card>
@@ -429,7 +475,7 @@ onChange: (newSelectedRowKeys) => setSelectedRowKeys(newSelectedRowKeys),
 
       <Modal
         open={isViewModalVisible}
-onCancel={() => setIsViewModalVisible(false)}
+        onCancel={() => setIsViewModalVisible(false)}
         footer={[<Button key="close" type="primary" onClick={() => setIsViewModalVisible(false)}>Đóng</Button>]}
         width={800}
         centered

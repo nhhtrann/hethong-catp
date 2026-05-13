@@ -22,9 +22,9 @@ const UnitManagement = () => {
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [deletingIds, setDeletingIds] = useState([]); 
 
-  // 👉 BỔ SUNG: Trạng thái kiểm tra màn hình điện thoại
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [currentPage, setCurrentPage] = useState(1);
+
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
@@ -78,7 +78,7 @@ const UnitManagement = () => {
         fetchUnits(); 
       } else {
         const errorData = await response.json();
-message.error(errorData.message || 'Lỗi khi thêm đơn vị!');
+        message.error(errorData.message || 'Lỗi khi thêm đơn vị!');
       }
     } catch (error) {
       message.error('Không kết nối được với Server!');
@@ -132,7 +132,6 @@ message.error(errorData.message || 'Lỗi khi thêm đơn vị!');
     setIsEditModalVisible(true);
   };
 
-  // 👉 ĐÃ SỬA: Hủy ghim checkbox trên mobile, bóp nhỏ cột
   const rowSelection = {
     selectedRowKeys,
     onChange: (newSelectedRowKeys) => {
@@ -142,7 +141,6 @@ message.error(errorData.message || 'Lỗi khi thêm đơn vị!');
     columnWidth: 40,
   };
 
-  // 👉 ĐÃ SỬA: Căn giữa, ghim cố định cột hành động bên phải
   const columns = [
     { title: 'STT', key: 'stt', width: 60, align: 'center', render: (text, record, index) => (currentPage - 1) * 8 + index + 1 
     },
@@ -164,14 +162,14 @@ message.error(errorData.message || 'Lỗi khi thêm đơn vị!');
     {
       title: 'Hành động',
       key: 'action',
-      fixed: 'right', // Ghim cứng bên phải
-      width: 80,      // Ép nhỏ cột lại
+      fixed: 'right', 
+      width: 80,      
       align: 'center',
       render: (_, record) => (
         <Space size={0}>
           <Button 
             type="text" size="small"
-icon={<EditOutlined style={{ color: '#1890ff', fontSize: '16px' }} />} 
+            icon={<EditOutlined style={{ color: '#1890ff', fontSize: '16px' }} />} 
             onClick={() => openEditModal(record)} 
           />
           <Button 
@@ -184,10 +182,16 @@ icon={<EditOutlined style={{ color: '#1890ff', fontSize: '16px' }} />}
     },
   ];
 
+  // 👉 HÀM XỬ LÝ CHỌN TẤT CẢ CÁC TRANG
+  const handleSelectAllAcrossPages = () => {
+    // Lấy toàn bộ ID của danh sách đang được lọc và đẩy vào selectedRowKeys
+    const allKeys = filteredData.map(item => item.key);
+    setSelectedRowKeys(allKeys);
+  };
+
   return (
-    <div style={{ padding: 'clamp(10px, 2vw, 24px)', overflowX: 'hidden' }}>
+    <div style={{ padding: 'clamp(10px, 2vw, 24px)', maxWidth: '1400px', margin: '0 auto', overflowX: 'hidden' }}>
       
-      {/* 👉 ĐÃ SỬA: Header căn giữa, nút dồn lề phải */}
       <div style={{ 
         display: 'flex', 
         flexDirection: isMobile ? 'column' : 'row', 
@@ -230,7 +234,6 @@ icon={<EditOutlined style={{ color: '#1890ff', fontSize: '16px' }} />}
 
       <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
         
-        {/* 👉 ĐÃ SỬA: Toolbar tự động bóp nhỏ trên mobile */}
         <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 20, width: '100%' }}>
           <Space wrap style={{ width: '100%' }}>
             <Input 
@@ -247,7 +250,7 @@ icon={<EditOutlined style={{ color: '#1890ff', fontSize: '16px' }} />}
               onChange={setFilterTrangThai}
             >
               <Select.Option value="Tất cả">Tất cả trạng thái</Select.Option>
-<Select.Option value="Hoạt động">Hoạt động</Select.Option>
+              <Select.Option value="Hoạt động">Hoạt động</Select.Option>
               <Select.Option value="Tạm ngưng">Tạm ngưng</Select.Option>
             </Select>
 
@@ -259,8 +262,51 @@ icon={<EditOutlined style={{ color: '#1890ff', fontSize: '16px' }} />}
           </Space>
         </div>
 
-        {/* 👉 ĐÃ SỬA: Bổ sung cấu hình phân trang gọn nhẹ */}
+        {/* 👉 BỔ SUNG: THANH BÁO CHỌN TẤT CẢ (Giống y hệt ảnh số 3 và 2 của bạn) */}
+        {selectedRowKeys.length > 0 && (
+          <div style={{ 
+            backgroundColor: '#e6f4ff', 
+            border: '1px solid #91caff', 
+            borderRadius: '6px', 
+            padding: '8px 16px', 
+            marginBottom: '16px', 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '10px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <Tag 
+                closable 
+                onClose={() => setSelectedRowKeys([])} // Nút X để bỏ chọn tất cả
+                color="blue" 
+                style={{ fontSize: '14px', padding: '2px 8px', margin: 0 }}
+              >
+                Đã chọn {selectedRowKeys.length}
+              </Tag>
+              <span style={{ marginLeft: '12px', color: '#595959', fontSize: '14px' }}>
+                {selectedRowKeys.length === filteredData.length 
+                  ? 'Bạn đã chọn toàn bộ dữ liệu.' 
+                  : `Bạn đang chọn ${selectedRowKeys.length} đơn vị.`}
+              </span>
+            </div>
+            
+            {/* Hiện link "Chọn tất cả" nếu người dùng chưa chọn hết danh sách */}
+            {selectedRowKeys.length < filteredData.length && (
+              <Button 
+                type="link" 
+                onClick={handleSelectAllAcrossPages} 
+                style={{ padding: 0, fontWeight: '500', fontSize: '14px' }}
+              >
+                Chọn tất cả {filteredData.length} đơn vị trong danh sách này
+              </Button>
+            )}
+          </div>
+        )}
+
         <Table 
+          size="middle"
           columns={columns} 
           dataSource={filteredData} 
           rowSelection={rowSelection}
@@ -304,7 +350,7 @@ icon={<EditOutlined style={{ color: '#1890ff', fontSize: '16px' }} />}
         open={isDeleteModalVisible}
         onOk={executeDelete}
         onCancel={() => setIsDeleteModalVisible(false)}
-okText="Có, Xóa ngay"
+        okText="Có, Xóa ngay"
         cancelText="Hủy bỏ"
         okButtonProps={{ danger: true }}
         centered

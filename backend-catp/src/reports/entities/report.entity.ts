@@ -14,8 +14,11 @@ export class Report {
   @Column({ type: 'text', nullable: true })
   noiDung: string;
 
-  @Column({ nullable: true })
-  toaDoGps: string;
+  @Column({ type: 'float', nullable: true })
+  viDo: number;
+
+  @Column({ type: 'float', nullable: true })
+  kinhDo: number;
 
   @Column({ default: 'Mới' })
   trangThai: string;
