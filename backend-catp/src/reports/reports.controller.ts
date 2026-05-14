@@ -28,7 +28,7 @@ export class ReportsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateReportDto: any) {
+  update(@Param('id') id: string, @Body() updateReportDto: UpdateReportDto) {
     // Chuyển id từ chuỗi (string) sang số (number) và gọi hàm service
     return this.reportsService.update(+id, updateReportDto);
   }

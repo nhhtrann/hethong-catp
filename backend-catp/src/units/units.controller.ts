@@ -18,7 +18,7 @@ export class UnitsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUnitDto: any) {
+  update(@Param('id') id: string, @Body() updateUnitDto: UpdateUnitDto) {
     return this.unitsService.update(+id, updateUnitDto);
   }
 
