@@ -36,30 +36,43 @@ const UnitManagement = () => {
 
   // 2. GỌI API THÊM ĐƠN VỊ MỚI
   const handleAddUnit = async (values) => {
+    // Thêm .trim() để cắt gọt khoảng trắng thừa ở 2 đầu trước khi gửi lên Server
+    const cleanData = {
+      tenDonVi: values.tenDonVi.trim(),
+      nguoiLienHe: values.nguoiLienHe.trim(),
+      soDienThoai: values.soDienThoai.trim(),
+      trangThai: 'Hoạt động'
+    };
+
+    message.loading({ content: 'Đang lưu dữ liệu...', key: 'addUnit' });
+
     try {
       const response = await fetch('http://localhost:3000/units', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tenDonVi: values.tenDonVi,
-          nguoiLienHe: values.nguoiLienHe,
-          soDienThoai: values.soDienThoai,
-          trangThai: 'Hoạt động'
-        })
+        body: JSON.stringify(cleanData)
       });
 
       if (response.ok) {
-        message.success('Đã thêm đơn vị mới thành công!');
+        message.success({ content: 'Đã thêm đơn vị mới thành công!', key: 'addUnit', duration: 3 });
         setIsModalVisible(false);
         form.resetFields(); 
         fetchUnits(); 
       } else {
-        const errorData = await response.json();
-        message.error(errorData.message || 'Lỗi khi thêm đơn vị!');
+        // 👉 BẮT LỖI SERVER Ở ĐÂY
+        if (response.status === 500) {
+          message.error({ content: 'Máy chủ đang gặp sự cố (Lỗi 500). Vui lòng thử lại sau!', key: 'addUnit', duration: 4 });
+        } else if (response.status === 404) {
+          message.error({ content: 'Không tìm thấy đường dẫn hệ thống (Lỗi 404).', key: 'addUnit', duration: 4 });
+        } else {
+          // Bắt các lỗi do mình tự cấu hình từ Backend (như trùng tên, thiếu dữ liệu)
+          const errorData = await response.json();
+          message.error({ content: errorData.message || 'Lý do từ chối: Dữ liệu không hợp lệ!', key: 'addUnit', duration: 4 });
+        }
       }
     } catch (error) {
-      console.error(error);
-      message.error('Không kết nối được với Server!');
+      // Lỗi rơi vào catch thường là do sập mạng hoặc Backend chưa chạy
+      message.error({ content: 'Mất kết nối mạng! Vui lòng kiểm tra lại đường truyền.', key: 'addUnit', duration: 4 });
     }
   };
 
@@ -174,15 +187,42 @@ const UnitManagement = () => {
         cancelText="Hủy"
       >
         <Form form={form} layout="vertical" onFinish={handleAddUnit}>
-          <Form.Item name="tenDonVi" label="Tên đơn vị (Công an Phường/Quận)" rules={[{ required: true, message: 'Vui lòng nhập tên đơn vị!' }]}>
-            <Input placeholder="Ví dụ: Công an Phường Phú Nhuận" />
-          </Form.Item>
-          <Form.Item name="nguoiLienHe" label="Người liên hệ (Chỉ huy)">
-            <Input placeholder="Ví dụ: Đại úy Lê Văn A" />
-          </Form.Item>
-          <Form.Item name="soDienThoai" label="Số điện thoại trực ban">
-            <Input placeholder="Ví dụ: 0234.38... hoặc 090..." />
-          </Form.Item>
+          <Form.Item 
+          name="tenDonVi" 
+          label="Tên đơn vị (Công an Phường/Quận)" 
+          rules={[
+            { required: true, message: 'Vui lòng nhập tên đơn vị!' },
+            { whitespace: true, message: 'Tên đơn vị không được chỉ chứa khoảng trắng!' },
+            { max: 100, message: 'Tên quá dài, tối đa 100 ký tự!' }
+          ]}
+        >
+          <Input placeholder="Ví dụ: Công an Phường Phú Nhuận" />
+        </Form.Item>
+
+        <Form.Item 
+          name="nguoiLienHe" 
+          label="Người liên hệ (Chỉ huy)"
+          rules={[
+            { required: true, message: 'Vui lòng nhập tên người liên hệ!' },
+            { whitespace: true, message: 'Tên không được chỉ chứa khoảng trắng!' }
+          ]}
+        >
+          <Input placeholder="Ví dụ: Đại úy Lê Văn A" />
+        </Form.Item>
+
+        <Form.Item 
+          name="soDienThoai" 
+          label="Số điện thoại trực ban"
+          rules={[
+            { required: true, message: 'Vui lòng nhập số điện thoại!' },
+            { whitespace: true, message: 'Số điện thoại không được để trống!' },
+            // Chỉ cho phép nhập số, dấu chấm, khoảng trắng hoặc dấu gạch ngang
+            { pattern: /^[0-9\.\-\s]+$/, message: 'Số điện thoại chỉ được chứa chữ số và ký tự hợp lệ!' },
+            { min: 8, message: 'Số điện thoại quá ngắn!' }
+          ]}
+        >
+          <Input placeholder="Ví dụ: 0234.38... hoặc 090..." />
+        </Form.Item>
         </Form>
       </Modal>
 
@@ -199,10 +239,10 @@ const UnitManagement = () => {
           <Form.Item name="tenDonVi" label="Tên đơn vị" rules={[{ required: true, message: 'Tên không được để trống' }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="nguoiLienHe" label="Người liên hệ (Chỉ huy)">
+          <Form.Item name="nguoiLienHe" label="Người liên hệ (Chỉ huy)" rules={[{ required: true, message: 'Vui lòng nhập tên người liên hệ!' }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="soDienThoai" label="Số điện thoại">
+          <Form.Item name="soDienThoai" label="Số điện thoại" rules={[{ required: true, message: 'Vui lòng nhập số điện thoại!' }]}>
             <Input />
           </Form.Item>
           <Form.Item name="trangThai" label="Trạng thái hoạt động">

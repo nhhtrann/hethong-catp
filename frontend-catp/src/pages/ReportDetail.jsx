@@ -1,6 +1,6 @@
 // src/components/ReportDetail.jsx
 import React, { useState, useEffect } from 'react';
-import { InboxOutlined } from '@ant-design/icons';
+import { InboxOutlined, EnvironmentOutlined } from '@ant-design/icons'; // 👉 THÊM EnvironmentOutlined
 import { Modal, Row, Col, Typography, Form, Select, Input, Upload, Button, message, Image, Alert, Tag } from 'antd';
 
 const { Title, Text, Paragraph } = Typography;
@@ -12,6 +12,7 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
   const [form] = Form.useForm();
   const [units, setUnits] = useState([]);
   const [fileList, setFileList] = useState([]);
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false); // 👉 State theo dõi tiến trình lấy GPS
 
   const isCompleted = data?.trangThai === 'Hoàn thành'; 
   const isPending = data?.trangThai === 'Chờ duyệt'; 
@@ -35,7 +36,6 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
         try {
           const parsed = JSON.parse(data.anhKetQua);
           if (Array.isArray(parsed)) {
-            // LỌC RÁC: Bỏ qua những file bị null từ trước
             initialFiles = parsed
               .filter(fileName => fileName && fileName !== 'null')
               .map((fileName, index) => ({
@@ -61,19 +61,18 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
         trangThai: mode === 'unit' && !isCompleted && !isPending ? 'Chờ duyệt' : data.trangThai,
         ghiChu: data.ghiChu || data.ghiChuKetQua || "",
         anhKetQua: initialFiles,
-        donViXuLy: data.donViXuLy
+        donViXuLy: data.donViXuLy,
+        // 👉 Đổ dữ liệu tọa độ cũ vào nếu đã có
+        kinhDo: data.kinhDo || "",
+        viDo: data.viDo || ""
       });
     }
   }, [data, visible, form, mode]);
 
-  // HÀM BẮT SỰ KIỆN UPLOAD ĐÃ ĐƯỢC NÂNG CẤP SIÊU CHẮC CHẮN
   const handleUploadChange = (info) => {
     let newFileList = [...info.fileList];
-
     newFileList = newFileList.map(file => {
-      // CHỈ xử lý khi file đã upload XONG (Tránh lấy nhầm lúc đang tải)
       if (file.status === 'done' && file.response) {
-        // Dự phòng Backend trả về "fileName" (chữ N hoa) hoặc "filename" (chữ n thường)
         const uploadedName = file.response.fileName || file.response.filename;
         if (uploadedName) {
           file.name = uploadedName; 
@@ -87,6 +86,35 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
     form.setFieldsValue({ anhKetQua: newFileList }); 
   };
 
+  // 👉 HÀM XỬ LÝ LẤY GPS THẬT TỪ THIẾT BỊ
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      message.error('Trình duyệt hoặc thiết bị của bạn không hỗ trợ định vị GPS!');
+      return;
+    }
+    
+    setIsFetchingLocation(true);
+    message.loading({ content: 'Đang kết nối vệ tinh để lấy tọa độ...', key: 'gps' });
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        // Cập nhật giá trị vào Form ngay lập tức
+        form.setFieldsValue({
+          kinhDo: position.coords.longitude.toString(),
+          viDo: position.coords.latitude.toString()
+        });
+        setIsFetchingLocation(false);
+        message.success({ content: 'Đã lấy được tọa độ hiện tại!', key: 'gps', duration: 2 });
+      },
+      (error) => {
+        setIsFetchingLocation(false);
+        console.error("Lỗi GPS: ", error);
+        message.error({ content: 'Không thể lấy tọa độ. Vui lòng bật Dịch vụ Vị trí (Location) và cấp quyền cho trình duyệt!', key: 'gps', duration: 4 });
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } // Ép lấy tọa độ chính xác cao nhất
+    );
+  };
+
   const handleLuuBaoCao = async (values) => {
     if (!data?.id) return message.error("Không tìm thấy ID vụ việc!");
     try {
@@ -96,7 +124,6 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
       let finalAnh = data.anhKetQua; 
       if (!disableResult) { 
         const currentFiles = values.anhKetQua || [];
-        // LỌC RÁC LẦN CUỐI: Đảm bảo không bao giờ lưu chữ null vào SQL nữa
         const fileNamesOnly = currentFiles
           .map(f => f.name)
           .filter(name => name != null && name !== 'null'); 
@@ -113,7 +140,9 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
           trangThai: finalStatus,
           donViXuLy: finalDonVi || "",
           ghiChuKetQua: finalGhiChu || "",
-          anhKetQua: finalAnh
+          anhKetQua: finalAnh,
+          kinhDo: disableResult ? data.kinhDo : values.kinhDo, // 👉 Gửi tọa độ lên DB
+          viDo: disableResult ? data.viDo : values.viDo      // 👉 Gửi tọa độ lên DB
         })
       });
 
@@ -199,6 +228,53 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
             <Form.Item name="ghiChu" label="Ghi chú kết quả">
               <TextArea rows={4} disabled={disableResult} />
             </Form.Item>
+
+            {/* 👉 KHU VỰC ĐIỀN TỌA ĐỘ VÀ NÚT LẤY GPS */}
+            <div style={{ padding: '12px', backgroundColor: '#f0f5ff', borderRadius: '8px', marginBottom: '16px', border: '1px solid #d6e4ff' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <Text strong style={{ color: '#005bac' }}>Vị trí xử lý thực tế:</Text>
+                {!disableResult && (
+                  <Button 
+                    type="primary" 
+                    size="small" 
+                    icon={<EnvironmentOutlined />} 
+                    onClick={handleGetLocation} 
+                    loading={isFetchingLocation}
+                    style={{ backgroundColor: '#1890ff' }}
+                  >
+                    Lấy vị trí hiện tại
+                  </Button>
+                )}
+              </div>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item 
+                    name="kinhDo" 
+                    label="Kinh độ"
+                    style={{ marginBottom: 0 }}
+                    rules={[
+                      { pattern: /^-?\d+(\.\d+)?$/, message: 'Phải là số!' },
+                      { whitespace: true, message: 'Lỗi khoảng trắng!' }
+                    ]}
+                  >
+                    <Input placeholder="Ví dụ: 108.123" disabled={disableResult} />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item 
+                    name="viDo" 
+                    label="Vĩ độ"
+                    style={{ marginBottom: 0 }}
+                    rules={[
+                      { pattern: /^-?\d+(\.\d+)?$/, message: 'Phải là số!' },
+                      { whitespace: true, message: 'Lỗi khoảng trắng!' }
+                    ]}
+                  >
+                    <Input placeholder="Ví dụ: 16.543" disabled={disableResult} />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </div>
 
             <Form.Item name="anhKetQua" label="Ảnh minh chứng kết quả">
               <Dragger 

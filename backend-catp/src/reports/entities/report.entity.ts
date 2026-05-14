@@ -14,8 +14,11 @@ export class Report {
   @Column({ type: 'text', nullable: true })
   noiDung: string;
 
-  @Column({ nullable: true })
-  toaDoGps: string;
+  @Column({ type: 'nvarchar', length: 50, nullable: true })
+kinhDo: string;
+
+@Column({ type: 'nvarchar', length: 50, nullable: true })
+viDo: string;
 
   @Column({ default: 'Mới' })
   trangThai: string;
