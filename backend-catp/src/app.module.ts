@@ -36,7 +36,7 @@ import { AppService } from './app.service';
         // Đưa các Entity vào đúng vị trí
         entities: [Report, Unit, News, User],
         
-        synchronize: true,
+        synchronize: false,
         extra: {
           trustServerCertificate: true,
           encrypt: false,

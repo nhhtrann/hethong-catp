@@ -70,6 +70,8 @@ const ReportDispatch = () => {
             donViXuLy: item.donViXuLy || '',
             trangThai: item.trangThai,
             noiDung: item.noiDung,
+            kinhDo: item.kinhDo,
+            viDo: item.viDo,
             ghiChu: item.ghiChuKetQua,
             anhKetQua: item.anhKetQua,
             anhKiemChung: item.anhKiemChung,

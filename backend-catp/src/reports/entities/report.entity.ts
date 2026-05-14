@@ -20,8 +20,8 @@ export class Report {
   @Column({ type: 'float', nullable: true })
   kinhDo: number;
 
-  @Column({ default: 'Mới' })
-  trangThai: string;
+  @Column({ type: 'nvarchar', length: 50, nullable: true })
+trangThai: string;
 
   @Column({ nullable: true })
   ghiChuKetQua: string; // Lưu ghi chú của Công an
