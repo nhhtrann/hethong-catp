@@ -61,7 +61,7 @@ const handleLogin = (userData) => { // Nhận nguyên object data
   const handleChangePassword = async (values) => {
     message.loading({ content: 'Đang xử lý...', key: 'changePass' });
     try {
-      const res = await fetch('http://localhost:3000/change-password', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/change-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: userInfo.email, oldPass: values.oldPassword, newPass: values.newPassword }),
@@ -101,7 +101,7 @@ const handleAvatarChange = (info) => {
 const handleSaveProfile = async (values) => {
   message.loading({ content: 'Đang lưu hồ sơ...', key: 'updateProfile' });
   try {
-    const response = await fetch('http://localhost:3000/update-profile', {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/update-profile`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       // Lúc này previewAvatar đã là chuỗi Base64, lưu xuống SQL vô tư!

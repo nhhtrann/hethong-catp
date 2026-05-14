@@ -17,7 +17,7 @@ export class ReportsController {
     return this.reportsService.findAll();
   }
 
-  @Get('stats') // Đường dẫn sẽ là http://localhost:3000/reports/stats
+  @Get('stats') 
   findAllStats() {
     return this.reportsService.getStats();
   } 

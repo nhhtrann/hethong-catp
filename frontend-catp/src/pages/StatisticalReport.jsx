@@ -23,7 +23,7 @@ const StatisticalReport = () => {
   }, []);
 
   useEffect(() => {
-    fetch('http://localhost:3000/reports')
+    fetch(`${import.meta.env.VITE_API_URL}/reports`)
       .then(res => res.json())
       .then(result => {
         if (Array.isArray(result)) {

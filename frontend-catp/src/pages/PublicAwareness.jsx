@@ -54,7 +54,7 @@ const PublicAwareness = () => {
   }, []);
 
   const fetchNews = () => {
-    fetch('http://localhost:3000/news')
+    fetch(`${import.meta.env.VITE_API_URL}/news`)
       .then(res => res.json())
       .then(result => {
         if (Array.isArray(result)) {
@@ -122,7 +122,7 @@ const PublicAwareness = () => {
   const handleSaveNews = async (values) => {
     try {
       const method = editingNews ? 'PATCH' : 'POST';
-      const url = editingNews ? `http://localhost:3000/news/${editingNews.id}` : 'http://localhost:3000/news';
+      const url = editingNews ? `${import.meta.env.VITE_API_URL}/news/${editingNews.id}` : `${import.meta.env.VITE_API_URL}/news`;
 
       const response = await fetch(url, {
         method: method,
@@ -170,7 +170,7 @@ const PublicAwareness = () => {
   const executeDelete = async () => {
     try {
       const responses = await Promise.all(deletingIds.map(id => 
-        fetch(`http://localhost:3000/news/${id}`, { method: 'DELETE' })
+        fetch(`${import.meta.env.VITE_API_URL}/news/${id}`, { method: 'DELETE' })
       ));
 
       const allOk = responses.every(res => res.ok);

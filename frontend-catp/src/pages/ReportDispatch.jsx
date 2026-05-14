@@ -57,7 +57,7 @@ const ReportDispatch = () => {
   }, []);
 
   const fetchData = () => {
-    fetch('http://localhost:3000/reports')
+    fetch(`${import.meta.env.VITE_API_URL}/reports` )
       .then(res => res.json())
       .then(result => {
         if (Array.isArray(result)) {
@@ -84,7 +84,7 @@ const ReportDispatch = () => {
       })
       .catch(error => console.error('Lỗi khi gọi API:', error));
       
-    fetch('http://localhost:3000/units')
+    fetch(`${import.meta.env.VITE_API_URL}/units`)
       .then(res => res.json())
       .then(result => Array.isArray(result) && setUnits(result))
       .catch(err => console.error(err));
@@ -139,7 +139,7 @@ const ReportDispatch = () => {
 
   const handleAddReport = async (values) => {
     try {
-      const response = await fetch('http://localhost:3000/reports', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/reports`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -171,7 +171,7 @@ const ReportDispatch = () => {
   const executeDelete = async () => {
     try {
       const responses = await Promise.all(deletingIds.map(id => 
-        fetch(`http://localhost:3000/reports/${id}`, { method: 'DELETE' })
+        fetch(`${import.meta.env.VITE_API_URL}/reports/${id}`, { method: 'DELETE' })
       ));
 
       const allOk = responses.every(res => res.ok);
@@ -453,12 +453,23 @@ const ReportDispatch = () => {
           
           <Row gutter={16}>
             <Col xs={24} md={16}>
-              <Form.Item name="tieuDe" label="Tiêu đề vụ việc" rules={[{ required: true }]}>
+              <Form.Item 
+                name="tieuDe" 
+                label="Tiêu đề vụ việc" 
+                rules={[
+                  { required: true, message: 'Vui lòng nhập tiêu đề!' },
+                  { whitespace: true, message: 'Tiêu đề không được chỉ chứa khoảng trắng!' } // 👉 Chặn chuỗi rỗng
+                ]}
+              >
                 <Input placeholder="Ví dụ: Lấn chiếm lòng lề đường..." />
               </Form.Item>
             </Col>
             <Col xs={24} md={8}>
-              <Form.Item name="mangViPham" label="Mảng vi phạm" rules={[{ required: true }]}>
+              <Form.Item 
+                name="mangViPham" 
+                label="Mảng vi phạm" 
+                rules={[{ required: true, message: 'Vui lòng chọn mảng vi phạm!' }]}
+              >
                 <Select placeholder="Chọn mảng">
                   <Option value="Trật tự đô thị">Trật tự đô thị</Option>
                   <Option value="Giao thông">Giao thông</Option>
@@ -469,7 +480,14 @@ const ReportDispatch = () => {
             </Col>
           </Row>
 
-          <Form.Item name="noiDung" label="Nội dung chi tiết" rules={[{ required: true }]}>
+          <Form.Item 
+            name="noiDung" 
+            label="Nội dung chi tiết" 
+            rules={[
+              { required: true, message: 'Vui lòng nhập nội dung!' },
+              { whitespace: true, message: 'Nội dung không được để toàn khoảng trắng!' } // 👉 Chặn chuỗi rỗng
+            ]}
+          >
             <TextArea rows={4} placeholder="Mô tả chi tiết tình hình..." />
           </Form.Item>
           

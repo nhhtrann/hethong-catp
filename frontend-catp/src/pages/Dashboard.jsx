@@ -20,12 +20,12 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-    fetch('http://localhost:3000/reports')
+    fetch(`${import.meta.env.VITE_API_URL}/reports`)
       .then(res => res.json())
       .then(result => Array.isArray(result) && setData(result))
       .catch(err => console.error(err));
 
-    fetch('http://localhost:3000/news')
+    fetch(`${import.meta.env.VITE_API_URL}/news`)
       .then(res => res.json())
       .then(result => Array.isArray(result) && setNews(result))
       .catch(err => console.error(err));

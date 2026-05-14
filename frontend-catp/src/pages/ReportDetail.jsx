@@ -23,7 +23,7 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
   const hideSaveBtn = (mode === 'unit' && (isCompleted || isPending)) || (mode === 'admin' && isCompleted);
 
   useEffect(() => {
-    fetch('http://localhost:3000/units')
+    fetch(`${import.meta.env.VITE_API_URL}/units`)
       .then(res => res.json())
       .then(result => Array.isArray(result) && setUnits(result))
       .catch(err => console.error("Lỗi load đơn vị:", err));
@@ -42,7 +42,7 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
                 uid: `-${index}`,
                 name: fileName,
                 status: 'done',
-                url: String(fileName).startsWith('http') ? fileName : `http://localhost:3000/uploads/${fileName}`
+                url: String(fileName).startsWith('http') ? fileName : `${import.meta.env.VITE_API_URL}/uploads/${fileName}`
               }));
           }
         } catch (error) {
@@ -51,7 +51,7 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
               uid: '-1',
               name: data.anhKetQua,
               status: 'done',
-              url: String(data.anhKetQua).startsWith('http') ? data.anhKetQua : `http://localhost:3000/uploads/${data.anhKetQua}`
+              url: String(data.anhKetQua).startsWith('http') ? data.anhKetQua : `${import.meta.env.VITE_API_URL}/uploads/${data.anhKetQua}`
             }];
           }
         }
@@ -77,7 +77,7 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
         const uploadedName = file.response.fileName || file.response.filename;
         if (uploadedName) {
           file.name = uploadedName; 
-          file.url = `http://localhost:3000/uploads/${uploadedName}`;
+          file.url = `${import.meta.env.VITE_API_URL}/uploads/${uploadedName}`;
         }
       }
       return file;
@@ -130,7 +130,7 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
 
       const finalStatus = mode === 'unit' ? 'Chờ duyệt' : values.trangThai;
 
-      const response = await fetch(`http://localhost:3000/reports/${data.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/reports/${data.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -201,7 +201,7 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
                  <Image 
                   key={index}
                   width="100%" 
-                  src={String(tenFile).startsWith('http') ? tenFile : `http://localhost:3000/uploads/${tenFile}`} 
+                  src={String(tenFile).startsWith('http') ? tenFile : `${import.meta.env.VITE_API_URL}/uploads/${tenFile}`} 
                   style={{ borderRadius: '8px', border: '1px solid #ddd', maxHeight: '300px', objectFit: 'contain', marginBottom: '8px' }}
                   fallback="https://via.placeholder.com/200?text=Lỗi+ảnh" 
                  />
@@ -254,12 +254,9 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
                     name="kinhDo" 
                     label="Kinh độ"
                     style={{ marginBottom: 0 }}
-                    rules={[
-                      { pattern: /^-?\d+(\.\d+)?$/, message: 'Phải là số!' },
-                      { whitespace: true, message: 'Lỗi khoảng trắng!' }
-                    ]}
+                    
                   >
-                    <Input placeholder="Ví dụ: 108.123" disabled={disableResult} />
+                    <Input placeholder="Ví dụ: 0.0" disabled={disableResult} />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
@@ -267,12 +264,9 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
                     name="viDo" 
                     label="Vĩ độ"
                     style={{ marginBottom: 0 }}
-                    rules={[
-                      { pattern: /^-?\d+(\.\d+)?$/, message: 'Phải là số!' },
-                      { whitespace: true, message: 'Lỗi khoảng trắng!' }
-                    ]}
+                   
                   >
-                    <Input placeholder="Ví dụ: 16.543" disabled={disableResult} />
+                    <Input placeholder="Ví dụ: 0.0" disabled={disableResult} />
                   </Form.Item>
                 </Col>
               </Row>
@@ -281,7 +275,7 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
             <Form.Item name="anhKetQua" label="Ảnh minh chứng kết quả">
               <Dragger 
                 name="file" 
-                action="http://localhost:3000/upload" 
+                action={`${import.meta.env.VITE_API_URL}/upload`} 
                 multiple 
                 disabled={disableResult}
                 listType="picture"

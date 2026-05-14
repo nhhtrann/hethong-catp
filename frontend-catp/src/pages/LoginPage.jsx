@@ -27,7 +27,7 @@ const LoginPage = ({ onLogin }) => {
     message.loading({ content: 'Đang xử lý đăng nhập...', key: 'login', duration: 0 });
 
     try {
-      const res = await fetch('http://localhost:3000/login', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: values.email, pass: values.password }), 
@@ -52,7 +52,7 @@ const LoginPage = ({ onLogin }) => {
   const handleRequestOtp = async (values) => {
     message.loading({ content: 'Đang kết nối trạm gửi Email...', key: 'forgot' });
     try {
-      const res = await fetch('http://localhost:3000/forgot-password', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: values.emailCuaToi }), // Khớp với biến API của bạn
@@ -74,7 +74,7 @@ const LoginPage = ({ onLogin }) => {
   const handleResetPassword = async (values) => {
     message.loading({ content: 'Đang xử lý...', key: 'reset' });
     try {
-      const res = await fetch('http://localhost:3000/reset-password', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

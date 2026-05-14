@@ -32,7 +32,7 @@ const UnitManagement = () => {
   }, []);
 
   const fetchUnits = () => {
-    fetch('http://localhost:3000/units')
+    fetch(`${import.meta.env.VITE_API_URL}/units`)
       .then(res => res.json())
       .then(result => {
         const reversedResult = [...result].reverse();
@@ -70,7 +70,7 @@ const UnitManagement = () => {
     message.loading({ content: 'Đang lưu dữ liệu...', key: 'addUnit' });
 
     try {
-      const response = await fetch('http://localhost:3000/units', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/units`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(cleanData)
@@ -101,7 +101,7 @@ const UnitManagement = () => {
 
   const handleUpdateUnit = async (values) => {
     try {
-      const response = await fetch(`http://localhost:3000/units/${editingUnit.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/units/${editingUnit.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(values)
@@ -128,7 +128,7 @@ const UnitManagement = () => {
   const executeDelete = async () => {
     try {
       await Promise.all(deletingIds.map(id => 
-        fetch(`http://localhost:3000/units/${id}`, { method: 'DELETE' })
+        fetch(`${import.meta.env.VITE_API_URL}/units/${id}`, { method: 'DELETE' })
       ));
       
       message.success(`Đã xóa thành công ${deletingIds.length} đơn vị!`);

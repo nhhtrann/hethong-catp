@@ -31,7 +31,7 @@ const ResultReport = () => {
   }, []);
 
   useEffect(() => {
-    fetch('http://localhost:3000/reports')
+    fetch(`${import.meta.env.VITE_API_URL}/reports`)
       .then(res => res.json())
       .then(result => {
         if (Array.isArray(result)) {
@@ -55,7 +55,7 @@ const ResultReport = () => {
       })
       .catch(error => console.error('Lỗi API Reports:', error));
 
-    fetch('http://localhost:3000/units')
+    fetch(`${import.meta.env.VITE_API_URL}/units`)
       .then(res => res.json())
       .then(result => Array.isArray(result) && setUnits(result))
       .catch(err => console.error('Lỗi API Units:', err));
