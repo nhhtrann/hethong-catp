@@ -15,6 +15,7 @@ import StatisticalReport from './pages/StatisticalReport';
 import PublicAwareness from './pages/PublicAwareness';
 import LoginPage from './pages/LoginPage';
 import ResultReport from './pages/ResultReport';
+import PublicPortal from './pages/PublicPortal';
 
 function App() {
   const [userRole, setUserRole] = useState(localStorage.getItem('userRole') || null);
@@ -147,10 +148,8 @@ const handleSaveProfile = async (values) => {
   }
 
   return (
-    // 👉 ĐÃ SỬA: Bọc toàn bộ App bằng ConfigProvider với màu xanh MobiFone (#005bac)
     <ConfigProvider 
       locale={viVN} 
-      // 👉 ÉP BUỘC: Khi nào trống dữ liệu thì hiện icon và chữ Tiếng Việt
       renderEmpty={() => <Empty description="Không có dữ liệu" />} 
       theme={{ 
         token: { 
@@ -162,73 +161,68 @@ const handleSaveProfile = async (values) => {
       }}
     >
       <BrowserRouter>
-        <div className="app-layout" style={{ display: 'flex', height: '100vh', width: '100%' }}>
-          <Sidebar role={userRole} />
-          
-          <div className="main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <header className="top-header" style={{ 
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
-              padding: isMobile ? '0 16px 0 56px' : '0 24px 0 60px', 
-              height: '64px', background: '#fff', borderBottom: '1px solid #f0f0f0' 
-            }}>
-              {/* Trong file src/App.jsx */}
-<h1 style={{ 
- margin: 0, 
-  fontSize: 'clamp(13px, 3.5vw, 18px)', // Thu nhỏ một chút trên mobile để xuống dòng đẹp hơn
-  fontWeight: '700', 
-  color: '#005bac', 
-  letterSpacing: '0.3px', 
-  fontFamily: "'Inter', sans-serif", 
-  lineHeight: '1.3', // Khoảng cách dòng vừa phải khi rớt xuống 2 dòng
-  textAlign: 'left', // Căn giữa trên mobile, căn trái trên desktop
-  whiteSpace: 'normal', // Cho phép chữ tự động rớt xuống dòng khi hết chỗ
-  wordWrap: 'break-word', // Tránh việc một từ quá dài làm vỡ layout
-  flex: 1, // Tự động co giãn chiếm phần không gian còn lại
-  paddingRight: '12px' // Tạo khoảng trống trên dưới cho nét chữ "thở"
-}}>
-  Hệ thống Tiếp nhận phản ánh & Tuyên truyền pháp luật
-</h1>
-              
-              <Dropdown menu={userMenu} placement="bottomRight" trigger={['click']}>
-                <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '8px' }}>
-                  <Avatar 
-                    size={isMobile ? "default" : "large"} src={userInfo?.avatar} icon={!userInfo?.avatar && <UserOutlined />} 
-                    style={{ backgroundColor: '#005bac', border: '2px solid #e6f7ff', objectFit: 'cover' }} 
-                  />
-                  <span style={{ fontWeight: 500, display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
-                    <span style={{ fontSize: isMobile ? '13px' : '14px', color: '#333' }}>
-                      {userInfo?.fullName || (userRole === 'admin' ? 'Admin' : 'Cán bộ')}
-                    </span>
-                    {!isMobile && <span style={{ fontSize: '12px', color: '#8c8c8c' }}>{userInfo?.email}</span>}
-                  </span>
-                </div>
-              </Dropdown>
-            </header>
+        <Routes>
+          {/* ==============================================================
+              THẾ GIỚI 1: PUBLIC PORTAL ĐỨNG ĐỘC LẬP (KHÔNG CÓ KHUNG ADMIN)
+          ================================================================== */}
+          <Route path="/cong-khai" element={<PublicPortal />} />
 
-            <div style={{ padding: 'clamp(10px, 2vw, 24px)', margin: 0, width: '100%', flex: 1, overflowY: 'auto', background: '#f0f2f5' }}>
-              <div className="content-area">
-                <Routes>
-                  <Route path="/" element={ userRole === 'admin' ? <Navigate to="/dashboard" replace /> : <Navigate to="/bao-cao-ket-qua" replace /> } />
-                  {userRole === 'admin' && (
-                    <>
-                      <Route path="/dashboard" element={<Dashboard />} />
-                      <Route path="/tiep-nhan" element={<ReportDispatch />} />
-                      <Route path="/don-vi" element={<UnitManagement />} />
-                      <Route path="/bao-cao" element={<StatisticalReport />} />
-                      <Route path="/tuyen-truyen" element={<PublicAwareness />} />
-                    </>
-                  )}
-                  {userRole === 'unit' && <Route path="/bao-cao-ket-qua" element={<ResultReport />} />}
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
+          {/* ==============================================================
+              THẾ GIỚI 2: TOÀN BỘ KHU VỰC ADMIN DÀNH CHO CÁN BỘ (Có Header, Sidebar)
+          ================================================================== */}
+          <Route path="/*" element={
+            <div className="app-layout" style={{ display: 'flex', height: '100vh', width: '100%' }}>
+              <Sidebar role={userRole} />
+              
+              <div className="main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <header className="top-header" style={{ 
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+                  padding: isMobile ? '0 16px 0 56px' : '0 24px 0 60px', 
+                  height: '64px', background: '#fff', borderBottom: '1px solid #f0f0f0' 
+                }}>
+                  <h1 style={{ margin: 0, fontSize: 'clamp(13px, 3.5vw, 18px)', fontWeight: '700', color: '#005bac', letterSpacing: '0.3px', fontFamily: "'Inter', sans-serif", lineHeight: '1.3', textAlign: 'left', whiteSpace: 'normal', wordWrap: 'break-word', flex: 1, paddingRight: '12px' }}>
+                    Hệ thống Tiếp nhận phản ánh & Tuyên truyền pháp luật
+                  </h1>
+                  
+                  <Dropdown menu={userMenu} placement="bottomRight" trigger={['click']}>
+                    <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '8px' }}>
+                      <Avatar size={isMobile ? "default" : "large"} src={userInfo?.avatar} icon={!userInfo?.avatar && <UserOutlined />} style={{ backgroundColor: '#005bac', border: '2px solid #e6f7ff', objectFit: 'cover' }} />
+                      <span style={{ fontWeight: 500, display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
+                        <span style={{ fontSize: isMobile ? '13px' : '14px', color: '#333' }}>
+                          {userInfo?.fullName || (userRole === 'admin' ? 'Admin' : 'Cán bộ')}
+                        </span>
+                        {!isMobile && <span style={{ fontSize: '12px', color: '#8c8c8c' }}>{userInfo?.email}</span>}
+                      </span>
+                    </div>
+                  </Dropdown>
+                </header>
+
+                <div style={{ padding: 'clamp(10px, 2vw, 24px)', margin: 0, width: '100%', flex: 1, overflowY: 'auto', background: '#f0f2f5' }}>
+                  <div className="content-area">
+                    {/* ĐÂY LÀ ROUTES CON BÊN TRONG KHUNG ADMIN */}
+                    <Routes>
+                      <Route path="/" element={ userRole === 'admin' ? <Navigate to="/dashboard" replace /> : <Navigate to="/bao-cao-ket-qua" replace /> } />
+                      {userRole === 'admin' && (
+                        <>
+                          <Route path="/dashboard" element={<Dashboard />} />
+                          <Route path="/tiep-nhan" element={<ReportDispatch />} />
+                          <Route path="/don-vi" element={<UnitManagement />} />
+                          <Route path="/bao-cao" element={<StatisticalReport />} />
+                          <Route path="/tuyen-truyen" element={<PublicAwareness />} />
+                        </>
+                      )}
+                      {userRole === 'unit' && <Route path="/bao-cao-ket-qua" element={<ResultReport />} />}
+                      <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          } />
+        </Routes>
 
-        {/* Các Modal giữ nguyên, nó sẽ tự động ăn theo màu của ConfigProvider */}
+        {/* CÁC MODAL GIỮ NGUYÊN */}
         <Modal title={<b><IdcardOutlined /> Hồ sơ cá nhân</b>} open={isProfileModalVisible} onCancel={() => setIsProfileModalVisible(false)} onOk={() => profileForm.submit()} okText="Lưu thay đổi" cancelText="Đóng" centered>
-          {/* ... (Giữ nguyên nội dung bên trong modal như cũ) */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px' }}>
             <Upload name="avatar" showUploadList={false} beforeUpload={() => false} onChange={handleAvatarChange}>
               <div style={{ position: 'relative', cursor: 'pointer' }}>
