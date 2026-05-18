@@ -12,6 +12,7 @@ import { NewsModule } from './news/news.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { UploadController } from './upload.controller';
 
 @Module({
   imports: [
@@ -55,7 +56,7 @@ import { AppService } from './app.service';
     NewsModule,
     
   ],
-  controllers: [AppController], 
+  controllers: [AppController, UploadController], 
   providers: [AppService],
 })
 export class AppModule {}

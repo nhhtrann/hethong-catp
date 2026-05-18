@@ -3,9 +3,10 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
-// 👉 Thêm dòng import này
 import { json, urlencoded } from 'express'; 
-import { join } from 'path/win32';
+
+// 👉 ĐÃ SỬA: Đổi từ 'path/win32' thành 'path' chuẩn của Linux/Nodejs
+import { join } from 'path'; 
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -18,11 +19,13 @@ async function bootstrap() {
     transform: true, // Tự động ép kiểu dữ liệu (vd: từ string '1' sang number 1)
   }));
 
+  // 👉 ĐÃ SỬA: Dùng process.cwd() để lấy đúng thư mục gốc /app trong Docker
+  app.useStaticAssets(join(process.cwd(), 'uploads'), {
+    prefix: '/uploads', // Đã bỏ dấu '/' ở cuối cho chuẩn URL
+  });
+
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ extended: true, limit: '50mb' }));
-  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
-    prefix: '/uploads/', 
-  });
   await app.listen(3000);
 }
 bootstrap();

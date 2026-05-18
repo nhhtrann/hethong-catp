@@ -130,23 +130,38 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
 
       const finalStatus = mode === 'unit' ? 'Chờ duyệt' : values.trangThai;
 
+      let finalKinhDo = disableResult ? data.kinhDo : (values.kinhDo || data.kinhDo);
+      let finalViDo = disableResult ? data.viDo : (values.viDo || data.viDo);
+
+      // BƯỚC 1: Tạo gói dữ liệu cốt lõi
+      const payloadData = {
+        trangThai: finalStatus,
+        donViXuLy: finalDonVi || "",
+        ghiChuKetQua: finalGhiChu || "",
+        anhKetQua: finalAnh,
+      };
+
+      // BƯỚC 2: Kiểm tra khắt khe tọa độ
+      if (finalKinhDo !== "" && finalKinhDo !== null && finalKinhDo !== undefined) {
+        payloadData.kinhDo = String(finalKinhDo);
+      }
+      if (finalViDo !== "" && finalViDo !== null && finalViDo !== undefined) {
+        payloadData.viDo = String(finalViDo);
+      }
+
+      // BƯỚC 3: Gửi đi (Chỉ khai báo const response đúng 1 lần ở đây)
       const response = await fetch(`${import.meta.env.VITE_API_URL}/reports/${data.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          trangThai: finalStatus,
-          donViXuLy: finalDonVi || "",
-          ghiChuKetQua: finalGhiChu || "",
-          anhKetQua: finalAnh,
-          kinhDo: disableResult ? data.kinhDo : values.kinhDo,
-          viDo: disableResult ? data.viDo : values.viDo 
-        })
+        body: JSON.stringify(payloadData)
       });
 
       if (response.ok) {
         message.success('Cập nhật thành công!');
         onClose();
         setTimeout(() => window.location.reload(), 500);
+      } else {
+        message.error('Backend từ chối dữ liệu! Hãy kiểm tra F12.'); 
       }
     } catch (error) {
       message.error('Lỗi kết nối máy chủ!');
