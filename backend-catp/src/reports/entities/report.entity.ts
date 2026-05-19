@@ -20,8 +20,8 @@ export class Report {
   @Column({ type: 'float', nullable: true })
   kinhDo: number;
 
-  @Column({ type: 'nvarchar', length: 50, nullable: true })
-trangThai: string;
+  @Column({ type: 'nvarchar', length: 50, nullable: true, default: 'Mới' })
+  trangThai: string;
 
   @Column({ nullable: true })
   ghiChuKetQua: string; // Lưu ghi chú của Công an
@@ -38,5 +38,20 @@ trangThai: string;
 
   @Column({ type: 'nvarchar', length: 'max', nullable: true })
   anhKetQua: string;
+  // Thêm các cột mới này vào bên trong export class Report { ... }
+
+  @Column({ type: 'bit', default: 0 }) // Dùng kiểu bit cho SQL Server (0 là false, 1 là true)
+  mucDoKhanCap: boolean;
+
+  @Column({ type: 'nvarchar', length: 100, nullable: true })
+  nhomVuViec: string;
+
+  @Column({ type: 'nvarchar', length: 255, nullable: true })
+  truongHoc: string;
+
+  @Column({ type: 'nvarchar', length: 20, nullable: true })
+  sdtNguoiGui: string;
   
+  @Column({ type: 'nvarchar', length: 255, nullable: true })
+  diaDiem: string;
 }

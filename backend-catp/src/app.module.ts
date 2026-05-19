@@ -28,20 +28,17 @@ import { UploadController } from './upload.controller';
       useFactory: (configService: ConfigService) => ({
         type: 'mssql',
         host: configService.get<string>('DB_HOST') || 'localhost',
-        // Ép kiểu chữ thành số một cách an toàn
         port: parseInt(configService.get<string>('DB_PORT') || '1433', 10),
         username: configService.get<string>('DB_USER') || 'sa',
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME') || 'hethong-catp',
         
-        // Đưa các Entity vào đúng vị trí
         entities: [Report, Unit, News, User],
         
-        synchronize: false,
+        synchronize: true, // Tự động tạo bảng theo Entity (Chỉ dùng trong dev, không dùng trong production)
         extra: {
-          trustServerCertificate: true,
+          trustServerCertificate: false,
           encrypt: false,
-          // Bọc nó vào trong một object 'options' nữa
           options: {
             cryptoCredentialsDetails: {
               minVersion: 'TLSv1',

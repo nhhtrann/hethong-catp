@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Menu, Row, Col, Card, Typography, Button, Input, Tag, Carousel, Modal, Form, Upload, message, Statistic, Divider } from 'antd';
+import { Layout, Menu, Row, Col, Card, Typography, Button, Input, Tag, Carousel, Modal, Form, Upload, message, Statistic, Divider, Select, Switch } from 'antd';
 import { SearchOutlined, UserOutlined, EditOutlined, EnvironmentOutlined, UploadOutlined, PhoneOutlined, CheckCircleOutlined, InboxOutlined } from '@ant-design/icons';
 
 const { Header, Content, Footer } = Layout;
 const { Title, Text, Paragraph } = Typography;
 const { Dragger } = Upload;
+const { Option } = Select;
 
 const PublicPortal = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -40,10 +41,77 @@ const PublicPortal = () => {
 
   const showModal = (e) => { if (e.key === 'submit') setIsModalVisible(true); };
   const handleCancel = () => { setIsModalVisible(false); form.resetFields(); };
-  const onFinish = (values) => {
-    message.success('Gửi phản ánh thành công! Đang chờ cán bộ duyệt.');
-    setIsModalVisible(false);
-    form.resetFields();
+  const onFinish = async (values) => {
+    message.loading({ content: 'Đang xử lý dữ liệu...', key: 'submitReport' });
+    
+    try {
+      let danhSachAnh = []; // Mảng chứa tên các file ảnh sau khi upload thành công
+
+      // 1. KIỂM TRA & UPLOAD ẢNH LÊN SERVER TRƯỚC
+      if (values.images && values.images.length > 0) {
+        message.loading({ content: 'Đang tải ảnh lên hệ thống...', key: 'submitReport' });
+        
+        // Vì mình chưa rõ API của bạn upload từng ảnh hay nhiều ảnh 1 lúc, 
+        // ở đây mình lấy tạm tấm ảnh ĐẦU TIÊN để upload (bạn có thể mở rộng sau)
+        const fileUpload = values.images[0].originFileObj;
+        const formData = new FormData();
+        formData.append('file', fileUpload); // 'file' là tên key thường dùng ở NestJS Multer
+
+        const uploadRes = await fetch(`${import.meta.env.VITE_API_URL}/upload`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          
+          // 👉 THÊM DÒNG NÀY: Để soi xem Backend thực sự trả về cái gì
+          console.log("Dữ liệu ảnh Backend trả về:", uploadData);
+          
+          // Bao lô tất cả các trường hợp tên biến mà NestJS hay trả về (filename, fileName, url, path, v.v.)
+          const fileName = uploadData.fileName || uploadData.filename || uploadData.url || uploadData.path || uploadData.data; 
+          
+          // 👉 CHẶN LỖI: Chỉ khi lấy được tên file thật mới nhét vào mảng
+          if (fileName) {
+            danhSachAnh.push(fileName);
+          } else {
+            message.warning('Up ảnh thành công nhưng không lấy được tên file!');
+          }
+        }
+      }
+
+      // 2. GOM DỮ LIỆU ĐÃ CÓ ẢNH ĐỂ GỬI VÀO DATABASE
+      const payload = {
+        tieuDe: values.title,
+        noiDung: values.description,
+        diaDiem: values.location,
+        mucDoKhanCap: values.isUrgent || false, 
+        nhomVuViec: values.incidentType,        
+        truongHoc: values.school,               
+        sdtNguoiGui: values.phone || "",
+        
+        // Biến mảng danhSachAnh thành chuỗi JSON (Ví dụ: "['anh1.jpg']") để khớp kiểu string trong SQL
+        anhKiemChung: JSON.stringify(danhSachAnh), 
+        
+        trangThai: "Mới", 
+      };
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/reports`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        message.success({ content: 'Gửi phản ánh thành công! Đang chờ cán bộ duyệt.', key: 'submitReport', duration: 3 });
+        setIsModalVisible(false);
+        form.resetFields();
+      } else {
+        message.error({ content: 'Lỗi khi lưu dữ liệu!', key: 'submitReport', duration: 3 });
+      }
+    } catch (error) {
+      message.error({ content: 'Lỗi kết nối máy chủ!', key: 'submitReport', duration: 3 });
+    }
   };
 
   return (
@@ -136,24 +204,79 @@ const PublicPortal = () => {
         </Row>
       </Content>
 
-      <Modal title={<Title level={4} style={{ margin: 0, color: '#9f224e' }}>GỬI BÁO CÁO HIỆN TRƯỜNG</Title>} open={isModalVisible} onCancel={handleCancel} footer={null} width={700} style={{ top: isMobile ? 10 : 100 }}>
-        <Form form={form} layout="vertical" onFinish={onFinish} style={{ marginTop: '20px' }}>
-          <Form.Item label="Tiêu đề phản ánh" name="title" rules={[{ required: true, message: 'Vui lòng nhập tiêu đề!' }]}><Input placeholder="Ví dụ: Rác thải vứt bừa bãi tại..." size="large" /></Form.Item>
-          <Form.Item label="Nội dung chi tiết" name="description" rules={[{ required: true, message: 'Vui lòng nhập nội dung!' }]}><Input.TextArea rows={isMobile ? 3 : 4} placeholder="Mô tả rõ tình trạng..." /></Form.Item>
+      <Modal title={<Title level={4} style={{ margin: 0, color: '#9f224e' }}>GỬI BÁO CÁO HIỆN TRƯỜNG</Title>} open={isModalVisible} onCancel={handleCancel} footer={null} width={750} style={{ top: isMobile ? 10 : 50 }}>
+        <Form form={form} layout="vertical" onFinish={onFinish} style={{ marginTop: '20px' }} initialValues={{ isUrgent: false }}>
+          
           <Row gutter={16}>
-            <Col xs={24} sm={12}><Form.Item label="Địa điểm (Đường, phường)" name="location" rules={[{ required: true, message: 'Vui lòng nhập địa điểm!' }]}><Input prefix={<EnvironmentOutlined />} placeholder="Ví dụ: 77 Nguyễn Huệ" size="large" /></Form.Item></Col>
-            <Col xs={24} sm={12}><Form.Item label="Số điện thoại liên hệ" name="phone"><Input prefix={<PhoneOutlined />} placeholder="Để liên hệ khi cần" size="large" /></Form.Item></Col>
+            <Col xs={24} sm={16}>
+              <Form.Item label="Tiêu đề vụ việc" name="title" rules={[{ required: true, message: 'Vui lòng nhập tiêu đề!' }]}><Input placeholder="Ví dụ: Đánh nhau cổng trường, Thuốc lá điện tử..." size="large" /></Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              {/* Theo Mục 4: Phân loại mức độ khẩn cấp */}
+              <Form.Item label={<span style={{color: 'red', fontWeight: 'bold'}}>Mức độ khẩn cấp?</span>} name="isUrgent" valuePropName="checked">
+                <Switch checkedChildren="Khẩn cấp" unCheckedChildren="Bình thường" style={{ marginTop: '5px' }} />
+              </Form.Item>
+            </Col>
           </Row>
-          <Form.Item label="Hình ảnh minh chứng (Rất quan trọng)">
+
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              {/* Theo Bước 2: Phân loại nhóm vụ việc */}
+              <Form.Item label="Nhóm vụ việc" name="incidentType" rules={[{ required: true, message: 'Chọn nhóm vụ việc!' }]}>
+                <Select placeholder="-- Chọn loại vi phạm --" size="large">
+                  <Option value="baoluc">Bạo lực học đường</Option>
+                  <Option value="matuy">Nghi ngờ Ma túy / Tệ nạn</Option>
+                  <Option value="giaothong">Vi phạm An toàn giao thông</Option>
+                  <Option value="anninh">Mất an ninh trật tự / Trộm cắp</Option>
+                  <Option value="khac">Khác...</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              {/* Theo Bước 2: Xác định trường học */}
+              <Form.Item label="Thuộc trường/Cơ sở" name="school" rules={[{ required: true, message: 'Chọn trường học!' }]}>
+                <Select placeholder="-- Chọn trường học --" size="large" showSearch>
+                  <Option value="dhkh">Đại học Khoa học Huế</Option>
+                  <Option value="dhs">Đại học Sư phạm Huế</Option>
+                  <Option value="qhc">THPT Quốc Học</Option>
+                  <Option value="hbt">THPT Hai Bà Trưng</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item label="Vị trí / Lớp học (Chi tiết)" name="location" rules={[{ required: true, message: 'Nhập vị trí cụ thể!' }]}><Input prefix={<EnvironmentOutlined />} placeholder="VD: Lớp 10A1, Cổng phụ..." size="large" /></Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              {/* Theo Mục 6: Bảo mật thông tin người phản ánh */}
+              <Form.Item label="Số điện thoại / Zalo (Sẽ được bảo mật)" name="phone"><Input prefix={<PhoneOutlined />} placeholder="Để CA liên hệ hỗ trợ" size="large" /></Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item label="Mô tả chi tiết diễn biến" name="description" rules={[{ required: true, message: 'Vui lòng mô tả!' }]}><Input.TextArea rows={3} placeholder="Mô tả rõ sự việc đang diễn ra, đặc điểm người vi phạm..." /></Form.Item>
+          
+          {/* 👉 ĐÃ SỬA: Thêm name="images" và cách lấy dữ liệu file */}
+          <Form.Item 
+            label="Hình ảnh/Video minh chứng (Rất quan trọng)" 
+            name="images"
+            valuePropName="fileList"
+            getValueFromEvent={(e) => {
+              if (Array.isArray(e)) { return e; }
+              return e?.fileList;
+            }}
+          >
             <Dragger multiple={true} listType="picture" beforeUpload={() => false}>
               <p className="ant-upload-drag-icon"><UploadOutlined style={{ color: '#9f224e' }} /></p>
               <p className="ant-upload-text">Nhấp hoặc kéo thả ảnh vào khu vực này</p>
-              <p className="ant-upload-hint">Hỗ trợ JPG, PNG. Tối đa 50MB.</p>
+              <p className="ant-upload-hint">Đính kèm ảnh hiện trường giúp cơ quan chức năng xử lý nhanh hơn.</p>
             </Dragger>
           </Form.Item>
+
           <Form.Item style={{ textAlign: 'right', marginTop: '20px', marginBottom: 0 }}>
             <Button onClick={handleCancel} style={{ marginRight: '10px' }} size="large">Hủy bỏ</Button>
-            <Button type="primary" htmlType="submit" size="large" style={{ background: '#9f224e' }}>Gửi lên hệ thống</Button>
+            <Button type="primary" htmlType="submit" size="large" style={{ background: '#9f224e' }}>GỬI PHẢN ÁNH NGAY</Button>
           </Form.Item>
         </Form>
       </Modal>

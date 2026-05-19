@@ -61,8 +61,7 @@ const ReportDispatch = () => {
       .then(res => res.json())
       .then(result => {
         if (Array.isArray(result)) {
-          const reversedResult = [...result].reverse();
-          const formattedData = reversedResult.map((item, index) => ({
+          const formattedData = result.map((item, index) => ({
             id: item.id,
             key: item.id?.toString(),
             tieuDe: item.tieuDe,

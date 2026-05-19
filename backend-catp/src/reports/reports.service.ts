@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Report } from './entities/report.entity';
+import { CreateReportDto } from './dto/create-report.dto';
 
 @Injectable()
 export class ReportsService {
@@ -12,14 +13,26 @@ export class ReportsService {
 
   // 1. Hàm lưu dữ liệu mới vào SQL (Tương đương INSERT INTO)
   create(createReportDto: any) {
+    if (!createReportDto.mangViPham) {
+    createReportDto.mangViPham = createReportDto.nhomVuViec || "Chưa phân loại";
+  }
     const newReport = this.reportsRepository.create(createReportDto);
     return this.reportsRepository.save(newReport);
   }
 
   // 2. Hàm lấy toàn bộ danh sách (Tương đương SELECT * FROM)
-  findAll() {
-    return this.reportsRepository.find();
-  }
+  async findAll() {
+  const reports = await this.reportsRepository.find({ order: { id: 'DESC' } });
+  
+  // Xử lý để gắn đường dẫn đầy đủ vào ảnh
+  return reports.map(report => ({
+    ...report,
+    // Giả sử anhKiemChung là một chuỗi JSON chứa danh sách ảnh: ["photo1.jpg"]
+    anhKiemChung: report.anhKiemChung ? JSON.parse(report.anhKiemChung).map(
+      (fileName: string) => `${process.env.API_URL || 'https://api.hethong-catp.io.vn'}/uploads/${fileName}`
+    ) : []
+  }));
+}
 
   // Các hàm này tạm để trống, mình sẽ làm sau
   findOne(id: number) { return `This action returns a #${id} report`; }
