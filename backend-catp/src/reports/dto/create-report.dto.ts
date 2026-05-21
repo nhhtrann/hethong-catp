@@ -1,5 +1,5 @@
 // src/reports/dto/create-report.dto.ts
-import { IsString, IsNotEmpty, IsOptional, IsBoolean } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsNumber } from 'class-validator';
 
 export class CreateReportDto {
   @IsString({ message: 'Tiêu đề phải là chuỗi chữ!' })
@@ -60,13 +60,14 @@ export class CreateReportDto {
   @IsBoolean()
   mucDoKhanCap?: boolean;
 
-  @IsNotEmpty({ message: 'Vui lòng chọn nhóm vụ việc' })
-  @IsString()
-  nhomVuViec: string;
+  @IsNumber()
+  @IsOptional()
+  categoryId?: number;
 
-  @IsNotEmpty({ message: 'Vui lòng chọn trường học' })
-  @IsString()
-  truongHoc: string;
+  
+  @IsNumber()
+  @IsOptional()
+  schoolId?: number;
 
   @IsOptional()
   @IsString()

@@ -2,7 +2,7 @@ import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('users') // Tên bảng trong SQL Server
 export class User {
-  @PrimaryGeneratedColumn()
+@PrimaryGeneratedColumn({ name: 'userId' })
   id: number;
 
   @Column({ unique: true })

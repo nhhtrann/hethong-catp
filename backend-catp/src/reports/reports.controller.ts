@@ -40,4 +40,9 @@ export class ReportsController {
     return this.reportsService.remove(+id); 
   }
 
+  @Get('categories/list')
+  getCategories() {
+    return this.reportsService.getCategories();
+  }
+
 }

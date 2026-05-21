@@ -46,9 +46,8 @@ const ReportDispatch = () => {
   const [previewImage, setPreviewImage] = useState('');
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  
-  // 👉 BỔ SUNG: State theo dõi trang hiện tại
   const [currentPage, setCurrentPage] = useState(1);
+  const [categories, setCategories] = useState([]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -65,7 +64,7 @@ const ReportDispatch = () => {
             id: item.id,
             key: item.id?.toString(),
             tieuDe: item.tieuDe,
-            mang: item.mangViPham,
+            mang: item.category ? item.category.tenDanhMuc : 'Chưa phân loại',
             donViXuLy: item.donViXuLy || '',
             trangThai: item.trangThai,
             noiDung: item.noiDung,
@@ -87,6 +86,10 @@ const ReportDispatch = () => {
       .then(res => res.json())
       .then(result => Array.isArray(result) && setUnits(result))
       .catch(err => console.error(err));
+    fetch(`${import.meta.env.VITE_API_URL}/reports/categories/list`)
+      .then(res => res.json())
+      .then(data => setCategories(data))
+      .catch(err => console.error("Lỗi tải danh mục:", err));
   };
 
   useEffect(() => {
@@ -324,14 +327,24 @@ const ReportDispatch = () => {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
             />
-            <Select value={filterMang || 'Tất cả'} style={{ width: '100%', minWidth: '130px', maxWidth: '160px' }} onChange={setFilterMang}>
+            <Select 
+              value={filterMang || 'Tất cả'} 
+              style={{ width: '100%', minWidth: '130px', maxWidth: '200px' }} 
+              popupMatchSelectWidth={false} 
+              onChange={setFilterMang}
+            >
               <Option value="Tất cả">Tất cả mảng</Option>
-              <Option value="Giao thông">Giao thông</Option>
-              <Option value="Bạo lực">Bạo lực</Option>
-              <Option value="Ma túy">Ma túy</Option>
-              <Option value="An ninh Trật tự">An ninh Trật tự</Option>
+              {categories.map(cat => (
+                <Option key={cat.id} value={cat.tenDanhMuc}>{cat.tenDanhMuc}</Option>
+              ))}
             </Select>
-            <Select value={filterTrangThai || 'Tất cả'} style={{ width: '100%', minWidth: '150px', maxWidth: '180px' }} onChange={setFilterTrangThai}>
+
+            <Select 
+              value={filterTrangThai || 'Tất cả'} 
+              style={{ width: '100%', minWidth: '150px', maxWidth: '200px' }} 
+              popupMatchSelectWidth={false}
+              onChange={setFilterTrangThai}
+            >
               <Option value="Tất cả">Tất cả trạng thái</Option>
               <Option value="Mới">Mới</Option>
               <Option value="Đang xử lý">Đang xử lý</Option>
@@ -339,7 +352,13 @@ const ReportDispatch = () => {
               <Option value="Hoàn thành">Hoàn thành</Option>
               <Option value="Trễ hạn">Trễ hạn</Option>
             </Select>
-            <Select value={filterDonVi} style={{ width: '100%', minWidth: '160px', maxWidth: '220px' }} onChange={setFilterDonVi}>
+
+            <Select 
+              value={filterDonVi} 
+              style={{ width: '100%', minWidth: '160px', maxWidth: '300px' }} /* 👉 Tăng maxWidth lên 300px */
+              popupMatchSelectWidth={false} /* 👉 Chống cắt chữ khi xổ xuống */
+              onChange={setFilterDonVi}
+            >
               <Option value="Tất cả">Tất cả đơn vị</Option>
                 {units.map(u => (
                 <Option key={u.id} value={u.tenDonVi}>{u.tenDonVi}</Option>

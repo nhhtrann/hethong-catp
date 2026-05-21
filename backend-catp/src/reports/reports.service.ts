@@ -3,31 +3,54 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Report } from './entities/report.entity';
 import { CreateReportDto } from './dto/create-report.dto';
+import { Category } from './entities/categories.entity';
 
 @Injectable()
 export class ReportsService {
   constructor(
     @InjectRepository(Report)
     private reportsRepository: Repository<Report>,
+
+    @InjectRepository(Category)
+    private categoriesRepository: Repository<Category>,
   ) {}
 
-  // 1. Hàm lưu dữ liệu mới vào SQL (Tương đương INSERT INTO)
-  create(createReportDto: any) {
-    if (!createReportDto.mangViPham) {
-    createReportDto.mangViPham = createReportDto.nhomVuViec || "Chưa phân loại";
+  async getCategories() {
+    return await this.categoriesRepository.find();
   }
-    const newReport = this.reportsRepository.create(createReportDto);
-    return this.reportsRepository.save(newReport);
+
+  async create(createReportDto: any) { // Tạm dùng any nếu DTO của bạn chưa cập nhật
+    const reportData = { ...createReportDto };
+    
+    // 👉 Xử lý Khóa ngoại: Nếu Frontend gửi lên categoryId, biến nó thành object cho TypeORM hiểu
+    if (reportData.categoryId) {
+      reportData.category = { id: reportData.categoryId };
+      delete reportData.categoryId; // Xóa key thừa đi
+    }
+
+    // 👉 Xử lý Khóa ngoại Trường học (Nếu có)
+    if (reportData.schoolId) {
+      reportData.school = { id: reportData.schoolId };
+      delete reportData.schoolId;
+    }
+
+    // Xử lý an toàn trạng thái
+    if (!reportData.trangThai) {
+      reportData.trangThai = "Mới";
+    }
+    
+    const newReport = this.reportsRepository.create(reportData);
+    return await this.reportsRepository.save(newReport);
   }
 
   // 2. Hàm lấy toàn bộ danh sách (Tương đương SELECT * FROM)
   async findAll() {
-  const reports = await this.reportsRepository.find({ order: { id: 'DESC' } });
-  
-  // Xử lý để gắn đường dẫn đầy đủ vào ảnh
+  const reports = await this.reportsRepository.find({ 
+    relations: ['category', 'school'],
+    order: { id: 'DESC' } });
+
   return reports.map(report => ({
     ...report,
-    // Giả sử anhKiemChung là một chuỗi JSON chứa danh sách ảnh: ["photo1.jpg"]
     anhKiemChung: report.anhKiemChung ? JSON.parse(report.anhKiemChung).map(
       (fileName: string) => `${process.env.API_URL || 'https://api.hethong-catp.io.vn'}/uploads/${fileName}`
     ) : []

@@ -13,6 +13,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UploadController } from './upload.controller';
+import { Category } from './reports/entities/categories.entity';
 
 @Module({
   imports: [
@@ -33,7 +34,7 @@ import { UploadController } from './upload.controller';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME') || 'hethong-catp',
         
-        entities: [Report, Unit, News, User],
+        entities: [Report, Unit, News, User, Category],
         
         synchronize: true, // Tự động tạo bảng theo Entity (Chỉ dùng trong dev, không dùng trong production)
         extra: {
@@ -47,7 +48,7 @@ import { UploadController } from './upload.controller';
         },
       }),
     }),
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User ]),
     ReportsModule,
     UnitsModule,
     NewsModule,

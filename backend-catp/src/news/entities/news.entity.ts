@@ -2,7 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeor
 
 @Entity('news') // Tên bảng trong SQL Server sẽ là 'new'
 export class News {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({ name: 'newsId' })
   id: number;
 
   @Column()

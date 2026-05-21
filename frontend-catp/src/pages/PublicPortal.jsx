@@ -8,6 +8,27 @@ const { Dragger } = Upload;
 const { Option } = Select;
 
 const PublicPortal = () => {
+  const [categories, setCategories] = useState([]);
+const [schools, setSchools] = useState([]);
+
+  useEffect(() => {
+    // 1. Lấy danh sách Mảng vi phạm
+    fetch(`${import.meta.env.VITE_API_URL}/reports/categories/list`)
+      .then(res => res.json())
+      .then(data => setCategories(data))
+      .catch(err => console.error("Lỗi tải danh mục:", err));
+
+    // 2. Lấy danh sách Trường học (Từ API units có sẵn của bạn)
+    fetch(`${import.meta.env.VITE_API_URL}/units`)
+      .then(res => res.json())
+      .then(data => {
+        // Lọc ra những đơn vị là Trường học (chứa chữ Đại học, THPT...)
+        const dsTruongHoc = data.filter(u => u.tenDonVi.includes('Đại học') || u.tenDonVi.includes('THPT'));
+        setSchools(dsTruongHoc);
+      })
+      .catch(err => console.error("Lỗi tải đơn vị:", err));
+  }, []);
+
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [form] = Form.useForm();
   
@@ -86,13 +107,13 @@ const PublicPortal = () => {
         noiDung: values.description,
         diaDiem: values.location,
         mucDoKhanCap: values.isUrgent || false, 
-        nhomVuViec: values.incidentType,        
-        truongHoc: values.school,               
+        
+        // 👉 ĐÃ SỬA: Bắn ID sang cho Backend thay vì bắn chữ
+        categoryId: values.incidentType,        
+        schoolId: values.school,               
+        
         sdtNguoiGui: values.phone || "",
-        
-        // Biến mảng danhSachAnh thành chuỗi JSON (Ví dụ: "['anh1.jpg']") để khớp kiểu string trong SQL
         anhKiemChung: JSON.stringify(danhSachAnh), 
-        
         trangThai: "Mới", 
       };
 
@@ -221,25 +242,23 @@ const PublicPortal = () => {
 
           <Row gutter={16}>
             <Col xs={24} sm={12}>
-              {/* Theo Bước 2: Phân loại nhóm vụ việc */}
               <Form.Item label="Nhóm vụ việc" name="incidentType" rules={[{ required: true, message: 'Chọn nhóm vụ việc!' }]}>
                 <Select placeholder="-- Chọn loại vi phạm --" size="large">
-                  <Option value="baoluc">Bạo lực học đường</Option>
-                  <Option value="matuy">Nghi ngờ Ma túy / Tệ nạn</Option>
-                  <Option value="giaothong">Vi phạm An toàn giao thông</Option>
-                  <Option value="anninh">Mất an ninh trật tự / Trộm cắp</Option>
-                  <Option value="khac">Khác...</Option>
+                  {/* Tự động in ra từ Database */}
+                  {categories.map(cat => (
+                    <Option key={cat.id} value={cat.id}>{cat.tenDanhMuc}</Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>
+            
             <Col xs={24} sm={12}>
-              {/* Theo Bước 2: Xác định trường học */}
               <Form.Item label="Thuộc trường/Cơ sở" name="school" rules={[{ required: true, message: 'Chọn trường học!' }]}>
                 <Select placeholder="-- Chọn trường học --" size="large" showSearch>
-                  <Option value="dhkh">Đại học Khoa học Huế</Option>
-                  <Option value="dhs">Đại học Sư phạm Huế</Option>
-                  <Option value="qhc">THPT Quốc Học</Option>
-                  <Option value="hbt">THPT Hai Bà Trưng</Option>
+                  {/* Tự động in ra từ Database */}
+                  {schools.map(school => (
+                    <Option key={school.id} value={school.id}>{school.tenDonVi}</Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>

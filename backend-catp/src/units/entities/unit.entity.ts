@@ -2,7 +2,7 @@ import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('units') // Tên bảng trong SQL Server
 export class Unit {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({ name: 'unitId' })
   id: number;
 
   @Column({ length: 255 })
