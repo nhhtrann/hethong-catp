@@ -119,7 +119,7 @@ return <Tag color={color}>{trangThai?.toUpperCase()}</Tag>;
               rowKey="id"
               size="small"
               bordered
-              scroll={{ x: 600 }}
+              scroll={{ x: 'max-content' }}
             />
           </Card>
         </Col>

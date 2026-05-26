@@ -1,9 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { AnyBulkWriteOperation, Repository } from 'typeorm';
 import { Report } from './entities/report.entity';
 import { CreateReportDto } from './dto/create-report.dto';
 import { Category } from './entities/categories.entity';
+import path from 'path';
+import fs from 'fs';
+import { Unit } from '../units/entities/unit.entity';
 
 @Injectable()
 export class ReportsService {
@@ -13,52 +16,115 @@ export class ReportsService {
 
     @InjectRepository(Category)
     private categoriesRepository: Repository<Category>,
+
+    @InjectRepository(Unit)
+    private unitsRepository: Repository<Unit>
   ) {}
 
+  
   async getCategories() {
     return await this.categoriesRepository.find();
   }
 
-  async create(createReportDto: any) { // Tạm dùng any nếu DTO của bạn chưa cập nhật
-    const reportData = { ...createReportDto };
-    
-    // 👉 Xử lý Khóa ngoại: Nếu Frontend gửi lên categoryId, biến nó thành object cho TypeORM hiểu
-    if (reportData.categoryId) {
-      reportData.category = { id: reportData.categoryId };
-      delete reportData.categoryId; // Xóa key thừa đi
+  async create(createReportDto: CreateReportDto, images?: any[]) {
+    let phuongXaId: number | null = null;
+
+    if (createReportDto.schoolId) {
+      const school = await this.unitsRepository.findOne({
+        where: { id: Number(createReportDto.schoolId) },
+        relations: ['phuongXa'],
+      });
+
+      if (school && school.phuongXa) {
+        phuongXaId = school.phuongXa.id;
+      }
     }
 
-    // 👉 Xử lý Khóa ngoại Trường học (Nếu có)
-    if (reportData.schoolId) {
-      reportData.school = { id: reportData.schoolId };
-      delete reportData.schoolId;
-    }
+    const newReport = this.reportsRepository.create({
+      ...createReportDto, // Kế thừa toàn bộ thuộc tính chuẩn từ DTO
+      trangThai: createReportDto.trangThai || 'Mới',
+      images: images || [],
+      school: createReportDto.schoolId ? { id: Number(createReportDto.schoolId) } : null,
+      nguoiGui: createReportDto.nguoiGuiId ? { id: Number(createReportDto.nguoiGuiId) } : null,
+      phuongXa: phuongXaId ? { id: phuongXaId } : null,
+    } as any);
 
-    // Xử lý an toàn trạng thái
-    if (!reportData.trangThai) {
-      reportData.trangThai = "Mới";
-    }
-    
-    const newReport = this.reportsRepository.create(reportData);
     return await this.reportsRepository.save(newReport);
   }
 
   // 2. Hàm lấy toàn bộ danh sách (Tương đương SELECT * FROM)
-  async findAll() {
-  const reports = await this.reportsRepository.find({ 
-    relations: ['category', 'school'],
-    order: { id: 'DESC' } });
+  async findAll(query: any = {}) {
+    const { role, phuongXaId } = query;
 
-  return reports.map(report => ({
-    ...report,
-    anhKiemChung: report.anhKiemChung ? JSON.parse(report.anhKiemChung).map(
-      (fileName: string) => `${process.env.API_URL || 'https://api.hethong-catp.io.vn'}/uploads/${fileName}`
-    ) : []
-  }));
-}
+    const options: any = {
+      // 👉 CHÌA KHÓA LÀ ĐÂY: Liệt kê các cột muốn lấy, chừa 2 cột ảnh ra!
+      select: {
+        id: true,
+        tieuDe: true,
+        noiDung: true,
+        diaDiem: true,
+        mucDoKhanCap: true,
+        trangThai: true,
+        sdtNguoiGui: true,
+        ngayGui: true,
+        donViXuLy: true,
+        ghiChuKetQua: true,
+        // TUYỆT ĐỐI KHÔNG ghi anhKiemChung và anhKetQua vào đây
+      },
+      relations: ['category', 'school', 'nguoiGui', 'phuongXa'], 
+      order: { id: 'DESC' }
+    };
+
+    if (role === 'unit' && phuongXaId) {
+      options.where = {
+        phuongXa: { id: Number(phuongXaId) }
+      };
+    }
+
+    // Lúc này Database trả về rất nhẹ, mảng reports không hề chứa chuỗi ảnh
+    const reports = await this.reportsRepository.find(options);
+
+    // Bạn có thể return reports luôn, không cần map() để JSON.parse ảnh ở đây nữa
+    return reports; 
+  }
 
   // Các hàm này tạm để trống, mình sẽ làm sau
-  findOne(id: number) { return `This action returns a #${id} report`; }
+  async findOne(id: number) {
+    // 1. Chỉ tìm đúng 1 bản ghi theo ID
+    const report = await this.reportsRepository.findOne({
+      where: { id },
+      relations: ['category', 'school', 'nguoiGui', 'phuongXa'], 
+    });
+
+    if (!report) return null;
+
+    // 2. Xử lý an toàn cho ảnh kiểm chứng (Giống hệt logic cũ của bạn)
+    let safeAnhKiemChung: any = report.anhKiemChung;
+    if (safeAnhKiemChung && typeof safeAnhKiemChung === 'string') {
+      try {
+        safeAnhKiemChung = JSON.parse(safeAnhKiemChung);
+      } catch (error) {
+        safeAnhKiemChung = [safeAnhKiemChung];
+      }
+    }
+
+    // 3. Xử lý an toàn cho ảnh kết quả
+    let safeAnhKetQua: any = report.anhKetQua;
+    if (safeAnhKetQua && typeof safeAnhKetQua === 'string') {
+      try {
+        safeAnhKetQua = JSON.parse(safeAnhKetQua);
+      } catch (error) {
+        safeAnhKetQua = [safeAnhKetQua];
+      }
+    }
+
+    // 4. Trả về đúng 1 Object hoàn chỉnh chứa hình ảnh
+    return {
+      ...report,
+      anhKiemChung: safeAnhKiemChung,
+      anhKetQua: safeAnhKetQua,
+    };
+  }
   
   // Cập nhật dữ liệu dựa theo ID
   async update(id: number, updateData: any) {

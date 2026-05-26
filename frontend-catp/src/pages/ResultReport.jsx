@@ -31,7 +31,12 @@ const ResultReport = () => {
   }, []);
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL}/reports`)
+    // 👉 1. Lấy thông tin tài khoản đang đăng nhập từ localStorage
+    const userInfo = JSON.parse(localStorage.getItem('catp_user')) || {};
+    const { role = '', phuongXaId = '' } = userInfo;
+
+    // 👉 2. Kẹp thêm role và phuongXaId vào đuôi của link API
+    fetch(`${import.meta.env.VITE_API_URL}/reports?role=${role}&phuongXaId=${phuongXaId}`)
       .then(res => res.json())
       .then(result => {
         if (Array.isArray(result)) {
@@ -55,6 +60,7 @@ const ResultReport = () => {
       })
       .catch(error => console.error('Lỗi API Reports:', error));
 
+    // API lấy danh sách Units giữ nguyên
     fetch(`${import.meta.env.VITE_API_URL}/units`)
       .then(res => res.json())
       .then(result => Array.isArray(result) && setUnits(result))

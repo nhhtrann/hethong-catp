@@ -24,8 +24,19 @@ const UnitManagement = () => {
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [currentPage, setCurrentPage] = useState(1);
+  const [phuongXaList, setPhuongXaList] = useState([]);
+  const fetchPhuongXa = async () => {
+  try {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/units/phuong-xa/list`);
+    const data = await res.json();
+    setPhuongXaList(data);
+  } catch (error) {
+    console.error("Lỗi lấy danh sách Phường Xã:", error);
+  }
+};
 
   useEffect(() => {
+    fetchPhuongXa();
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -159,6 +170,12 @@ const UnitManagement = () => {
     { title: 'STT', key: 'stt', width: 60, align: 'center', render: (text, record, index) => (currentPage - 1) * 8 + index + 1 
     },
     { title: 'Tên đơn vị', dataIndex: 'tenDonVi', key: 'tenDonVi', width: 250, align: 'center' },
+    {
+    title: 'Phường/Xã',
+    dataIndex: 'phuongXa', // Nhận về object phuongXa từ Backend
+    key: 'phuongXa',
+    render: (phuongXa) => phuongXa ? <b>{phuongXa.tenPhuongXa}</b> : <i style={{ color: '#ccc' }}>Chưa cập nhật</i>
+    },
     { title: 'Người liên hệ', dataIndex: 'nguoiLienHe', key: 'nguoiLienHe', width: 200, align: 'center' },
     { title: 'Số điện thoại', dataIndex: 'soDienThoai', key: 'soDienThoai', width: 150, align: 'center' },
     {
@@ -324,7 +341,7 @@ const UnitManagement = () => {
           columns={columns} 
           dataSource={filteredData} 
           rowSelection={rowSelection}
-          scroll={{ x: 1000 }} 
+          scroll={{ x: 'max-content' }} 
           bordered 
           pagination={{ 
             pageSize: 8,
@@ -349,6 +366,19 @@ const UnitManagement = () => {
           ]}
         >
           <Input placeholder="Ví dụ: Công an Phường Phú Nhuận" />
+        </Form.Item>
+
+        <Form.Item 
+          label="Thuộc Phường/Xã" 
+          name="phuongXaId"  // 👉 Đổi name thành phuongXaId (khớp với khóa ngoại)
+          rules={[{ required: true, message: 'Vui lòng chọn Phường/Xã!' }]}
+        >
+          <Select placeholder="-- Chọn Phường/Xã tại Huế --" showSearch>
+            {phuongXaList.map(px => (
+      // Dùng ID làm value, tenPhuongXa làm chữ hiển thị
+            <Select.Option key={px.id} value={px.id}>{px.tenPhuongXa}</Select.Option>
+        ))}
+          </Select>
         </Form.Item>
 
         <Form.Item 

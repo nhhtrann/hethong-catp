@@ -1,4 +1,5 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { PhuongXa } from './phuong-xa.entity';
 
 @Entity('units') // Tên bảng trong SQL Server
 export class Unit {
@@ -16,4 +17,8 @@ export class Unit {
 
   @Column({ default: 'Hoạt động' })
   trangThai: string;
+
+  @ManyToOne(() => PhuongXa, { nullable: true })
+  @JoinColumn({ name: 'phuongXaId' })
+  phuongXa: PhuongXa;
 }

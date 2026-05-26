@@ -2,6 +2,8 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, JoinColumn, ManyToOne } from 'typeorm';
 import { Unit } from '../../units/entities/unit.entity';
 import { Category } from './categories.entity'; // Đảm bảo tên file đúng nhé (categories.entity.ts)
+import { User } from '../../users/entities/user.entity';
+import { PhuongXa } from '../../units/entities/phuong-xa.entity';
 
 @Entity('reports')
 export class Report {
@@ -54,4 +56,12 @@ export class Report {
   @ManyToOne(() => Unit, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'schoolId' })
   school: Unit;
+
+  @ManyToOne(() => User, (user) => user.reports, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'nguoiGuiId' })
+  nguoiGui: User;
+
+  @ManyToOne(() => PhuongXa, { nullable: true })
+  @JoinColumn({ name: 'phuongXaId' })
+  phuongXa: PhuongXa;
 }

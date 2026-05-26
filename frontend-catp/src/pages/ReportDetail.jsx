@@ -1,7 +1,7 @@
 // src/components/ReportDetail.jsx
 import React, { useState, useEffect } from 'react';
 import { InboxOutlined, EnvironmentOutlined } from '@ant-design/icons';
-import { Modal, Row, Col, Typography, Form, Select, Input, Upload, Button, message, Image, Alert, Tag } from 'antd';
+import { Modal, Row, Col, Typography, Form, Select, Input, Upload, Button, message, Image, Alert } from 'antd';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -21,6 +21,19 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
   const disableResult = (mode === 'unit' && (isCompleted || isPending)) || (mode === 'admin' && isCompleted); 
   const disableStatus = mode === 'unit' || isCompleted; 
   const hideSaveBtn = (mode === 'unit' && (isCompleted || isPending)) || (mode === 'admin' && isCompleted);
+
+  // 👉 BỔ SUNG: Hàm xử lý link ảnh thông minh (Chặn lỗi 431 Base64)
+  const getImageUrl = (imgStr) => {
+    if (!imgStr) return '';
+    // Nếu là Base64, link web ngoài, hoặc blob thì tha cho nó
+    if (String(imgStr).startsWith('http') || String(imgStr).startsWith('data:image') || String(imgStr).startsWith('blob:')) {
+      return imgStr;
+    }
+    // Nếu không thì nối với API Host
+    const baseUrl = import.meta.env.VITE_API_URL.replace(/\/$/, '');
+    const imagePath = String(imgStr).startsWith('/') ? imgStr : `/${imgStr}`;
+    return `${baseUrl}${imagePath}`;
+  };
 
   useEffect(() => {
     fetch(`${import.meta.env.VITE_API_URL}/units`)
@@ -42,7 +55,8 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
                 uid: `-${index}`,
                 name: fileName,
                 status: 'done',
-                url: String(fileName).startsWith('http') ? fileName : `${import.meta.env.VITE_API_URL}/uploads/${fileName}`
+                // 👉 ĐÃ SỬA: Dùng hàm getImageUrl để load ảnh đã xử lý
+                url: getImageUrl(fileName) 
               }));
           }
         } catch (error) {
@@ -51,7 +65,8 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
               uid: '-1',
               name: data.anhKetQua,
               status: 'done',
-              url: String(data.anhKetQua).startsWith('http') ? data.anhKetQua : `${import.meta.env.VITE_API_URL}/uploads/${data.anhKetQua}`
+              // 👉 ĐÃ SỬA: Dùng hàm getImageUrl
+              url: getImageUrl(data.anhKetQua)
             }];
           }
         }
@@ -77,7 +92,8 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
         const uploadedName = file.response.fileName || file.response.filename;
         if (uploadedName) {
           file.name = uploadedName; 
-          file.url = `${import.meta.env.VITE_API_URL}/uploads/${uploadedName}`;
+          // 👉 ĐÃ SỬA: Dùng hàm getImageUrl
+          file.url = getImageUrl(uploadedName);
         }
       }
       return file;
@@ -107,7 +123,7 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
       (error) => {
         setIsFetchingLocation(false);
         console.error("Lỗi GPS: ", error);
-        message.error({ content: 'Không thể lấy tọa độ. Vui lòng bật Dịch vụ Vị trí (Location) và cấp quyền cho trình duyệt!', key: 'gps', duration: 4 });
+        message.error({ content: 'Không thể lấy tọa độ. Vui lòng bật Dịch vụ Vị trí (Location)!', key: 'gps', duration: 4 });
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
@@ -133,7 +149,6 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
       let finalKinhDo = disableResult ? data.kinhDo : (values.kinhDo || data.kinhDo);
       let finalViDo = disableResult ? data.viDo : (values.viDo || data.viDo);
 
-      // BƯỚC 1: Tạo gói dữ liệu cốt lõi
       const payloadData = {
         trangThai: finalStatus,
         donViXuLy: finalDonVi || "",
@@ -141,7 +156,6 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
         anhKetQua: finalAnh,
       };
 
-      // BƯỚC 2: Kiểm tra khắt khe tọa độ
       if (finalKinhDo !== "" && finalKinhDo !== null && finalKinhDo !== undefined) {
         payloadData.kinhDo = String(finalKinhDo);
       }
@@ -149,7 +163,6 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
         payloadData.viDo = String(finalViDo);
       }
 
-      // BƯỚC 3: Gửi đi (Chỉ khai báo const response đúng 1 lần ở đây)
       const response = await fetch(`${import.meta.env.VITE_API_URL}/reports/${data.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -168,7 +181,6 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
     }
   };
 
-  // 👉 LÁ CHẮN QUAN TRỌNG: Chặn đứng lỗi màn hình trắng nếu data chưa kịp load
   if (!data) return null;
 
   return (
@@ -195,7 +207,6 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
           <Text strong>Ảnh minh chứng từ người dân:</Text>
           <div style={{ marginTop: 10 }}>
              {(() => {
-               // Xử lý an toàn tuyệt đối hình ảnh đầu vào
                if (!data.anhKiemChung || data.anhKiemChung === "[]" || data.anhKiemChung === "null") {
                  return (
                    <div style={{ padding: '20px', background: '#f5f5f5', textAlign: 'center', borderRadius: '8px' }}>
@@ -216,7 +227,8 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
                  <Image 
                   key={index}
                   width="100%" 
-                  src={String(tenFile).startsWith('http') ? tenFile : `${import.meta.env.VITE_API_URL}/uploads/${tenFile}`} 
+                  // 👉 ĐÃ SỬA: Bọc hàm getImageUrl để diệt lỗi 431
+                  src={getImageUrl(tenFile)} 
                   style={{ borderRadius: '8px', border: '1px solid #ddd', maxHeight: '300px', objectFit: 'contain', marginBottom: '8px' }}
                   fallback="https://via.placeholder.com/200?text=Lỗi+ảnh" 
                  />
@@ -246,7 +258,6 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
               <TextArea rows={3} disabled={disableResult} placeholder="Nhập nội dung báo cáo kết quả..." />
             </Form.Item>
 
-            {/* 👉 KHU VỰC ĐIỀN TỌA ĐỘ VÀ NÚT LẤY GPS */}
             <div style={{ padding: '12px', backgroundColor: '#f0f5ff', borderRadius: '8px', marginBottom: '16px', border: '1px solid #d6e4ff' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <Text strong style={{ color: '#005bac' }}>Vị trí xử lý thực tế:</Text>
@@ -265,22 +276,12 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
               </div>
               <Row gutter={16}>
                 <Col span={12}>
-                  <Form.Item 
-                    name="kinhDo" 
-                    label="Kinh độ"
-                    style={{ marginBottom: 0 }}
-                    
-                  >
+                  <Form.Item name="kinhDo" label="Kinh độ" style={{ marginBottom: 0 }}>
                     <Input placeholder="Ví dụ: 0.0" disabled={disableResult} />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item 
-                    name="viDo" 
-                    label="Vĩ độ"
-                    style={{ marginBottom: 0 }}
-                   
-                  >
+                  <Form.Item name="viDo" label="Vĩ độ" style={{ marginBottom: 0 }}>
                     <Input placeholder="Ví dụ: 0.0" disabled={disableResult} />
                   </Form.Item>
                 </Col>

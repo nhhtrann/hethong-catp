@@ -14,6 +14,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UploadController } from './upload.controller';
 import { Category } from './reports/entities/categories.entity';
+import { PhuongXa } from './units/entities/phuong-xa.entity';
 
 @Module({
   imports: [
@@ -34,12 +35,14 @@ import { Category } from './reports/entities/categories.entity';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME') || 'hethong-catp',
         
-        entities: [Report, Unit, News, User, Category],
+        entities: [Report, Unit, News, User, Category, PhuongXa],
         
         synchronize: true, // Tự động tạo bảng theo Entity (Chỉ dùng trong dev, không dùng trong production)
         extra: {
           trustServerCertificate: false,
           encrypt: false,
+          requestTimeout: 30000, 
+          connectionTimeout: 30000,
           options: {
             cryptoCredentialsDetails: {
               minVersion: 'TLSv1',
@@ -48,10 +51,11 @@ import { Category } from './reports/entities/categories.entity';
         },
       }),
     }),
-    TypeOrmModule.forFeature([User ]),
+    TypeOrmModule.forFeature([User, Category, PhuongXa]),
     ReportsModule,
     UnitsModule,
     NewsModule,
+    UsersModule,
     
   ],
   controllers: [AppController, UploadController], 

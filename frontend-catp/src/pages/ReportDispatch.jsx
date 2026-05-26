@@ -67,6 +67,7 @@ const ReportDispatch = () => {
             mang: item.category ? item.category.tenDanhMuc : 'Chưa phân loại',
             donViXuLy: item.donViXuLy || '',
             trangThai: item.trangThai,
+            nguoiBaoTin: item.nguoiGui ? (item.nguoiGui.fullName || item.nguoiGui.email) : 'Ẩn danh',
             noiDung: item.noiDung,
             kinhDo: item.kinhDo,
             viDo: item.viDo,
@@ -238,12 +239,35 @@ const ReportDispatch = () => {
       },
     },
     {
+      title: 'Người báo tin',
+      dataIndex: 'nguoiBaoTin',
+      key: 'nguoiBaoTin',
+      width: 160,
+      render: (text, record) => (
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {/* Nếu không có tên thì fallback về 'Người dân' hoặc 'Ẩn danh' */}
+          <b>{text || 'Người dân'}</b>
+          
+          {/* 👉 ĐÃ SỬA: Bắt buộc diemUyTin phải là SỐ thì mới in ra */}
+          {typeof record.diemUyTin === 'number' && (
+            <span style={{ 
+              fontSize: '12px', 
+              color: record.diemUyTin < 50 ? '#ff4d4f' : '#52c41a' 
+            }}>
+              Uy tín: {record.diemUyTin} điểm
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
       title: 'Hành động',
       key: 'action',
       fixed: 'right', 
       width: 80,
       align: 'center',
       render: (_, record) => (
+        
         <Space size={0}>
           <Button 
             type="text" size="small"
@@ -436,7 +460,7 @@ const ReportDispatch = () => {
           columns={columns} 
           dataSource={filteredData} 
           rowSelection={rowSelection}
-          scroll={{ x: 1200 }} 
+          scroll={{ x: 'max-content' }} 
           bordered
           // 👉 BỔ SUNG: Map state currentPage vào Pagination
           pagination={{ 

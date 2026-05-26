@@ -7,6 +7,11 @@ import { UpdateUnitDto } from './dto/update-unit.dto';
 export class UnitsController {
   constructor(private readonly unitsService: UnitsService) {}
 
+  @Get('phuong-xa/list')
+  getPhuongXaList() {
+    return this.unitsService.getAllPhuongXa();
+  }
+  
   @Post()
   create(@Body() createUnitDto: CreateUnitDto) {
     return this.unitsService.create(createUnitDto);

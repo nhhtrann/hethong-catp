@@ -2,12 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Form, Input, Button, Typography, message, Modal } from 'antd'; 
 import { UserOutlined, LockOutlined, SafetyCertificateOutlined, MailOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom'; // 👉 BỔ SUNG: Dùng để chuyển trang
 
 const { Title, Paragraph, Link } = Typography;
 
 const LoginPage = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const navigate = useNavigate(); // 👉 BỔ SUNG: Khởi tạo navigate
 
   // States cho Quên mật khẩu
   const [isForgotModalVisible, setIsForgotModalVisible] = useState(false);
@@ -27,18 +29,35 @@ const LoginPage = ({ onLogin }) => {
     message.loading({ content: 'Đang xử lý đăng nhập...', key: 'login', duration: 0 });
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/login`, {
+      // 👉 ĐÃ SỬA: Trỏ đúng API /users/login
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/users/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: values.email, pass: values.password }), 
+        // 👉 ĐÃ SỬA: Đổi tên biến pass thành password cho khớp Backend
+        body: JSON.stringify({ email: values.email, password: values.password }), 
       });
+      
       const data = await res.json();
       setLoading(false);
 
-      if (data.success) {
-        localStorage.setItem('catp_user', JSON.stringify(data)); 
-        onLogin(data); 
+      // 👉 ĐÃ SỬA: Check res.ok thay vì data.success (Chuẩn RESTful API)
+      if (res.ok) {
+        // Lưu thông tin user vào localStorage
+        localStorage.setItem('catp_user', JSON.stringify(data.user)); 
+        if(onLogin) onLogin(data.user); 
         message.success({ content: 'Đăng nhập thành công!', key: 'login', duration: 3 });
+        
+        // 👉 ĐIỀU HƯỚNG PHÂN QUYỀN
+        if (data.user.role === 'admin') {
+          navigate('/dashboard'); // Nếu cán bộ -> Vào Admin
+        }
+        else if (data.user.role === 'unit') {
+          navigate('/bao-cao-ket-qua'); // Nếu người dân -> Về trang chủ
+        } 
+        else {
+          navigate('/cong-khai'); // Nếu người dân -> Về trang chủ
+        }
+
       } else {
         message.error({ content: data.message || 'Sai thông tin đăng nhập!', key: 'login', duration: 3 });
       }
@@ -55,7 +74,7 @@ const LoginPage = ({ onLogin }) => {
       const res = await fetch(`${import.meta.env.VITE_API_URL}/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: values.emailCuaToi }), // Khớp với biến API của bạn
+        body: JSON.stringify({ email: values.emailCuaToi }), 
       });
       const data = await res.json();
       if (data.success) {
@@ -108,7 +127,7 @@ const LoginPage = ({ onLogin }) => {
       <Card 
         bordered={false} 
         style={{ 
-          width: isMobile ? '90%' : '400px', // 👉 ĐÃ SỬA: Bóp nhỏ lại 90% trên điện thoại cho thanh thoát
+          width: isMobile ? '90%' : '400px', 
           maxWidth: '450px',
           boxShadow: '0 10px 25px rgba(0,0,0,0.2)', 
           borderRadius: '12px', 
@@ -137,7 +156,6 @@ const LoginPage = ({ onLogin }) => {
             <Input.Password prefix={<LockOutlined />} placeholder="Mật khẩu..." />
           </Form.Item>
 
-          {/* 👉 ĐÃ THÊM: Nút quên mật khẩu nằm lệch phải */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
             <Link 
               style={{ fontSize: '13px', color: '#005bac' }} 
@@ -155,12 +173,11 @@ const LoginPage = ({ onLogin }) => {
         </Form>
       </Card>
 
-      {/* 👉 ĐÃ THÊM: MODAL QUÊN MẬT KHẨU HOÀN CHỈNH */}
       <Modal
         title={<b style={{ color: '#005bac' }}><SafetyCertificateOutlined /> Khôi phục mật khẩu</b>}
         open={isForgotModalVisible}
         onCancel={() => { setIsForgotModalVisible(false); setForgotStep(1); forgotForm.resetFields(); }}
-        footer={null} // Tắt footer mặc định để dùng nút của Form
+        footer={null} 
         centered
       >
         <Form form={forgotForm} layout="vertical" onFinish={forgotStep === 1 ? handleRequestOtp : handleResetPassword} size="large">

@@ -5,7 +5,6 @@ import { UsersService } from './users.service';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  // 👉 THÊM HÀM NÀY ĐỂ TEST TRÊN TRÌNH DUYỆT
   @Get()
   testServer() {
     return { message: "Server NestJS và Controller Users đã thông suốt!" };
@@ -14,5 +13,10 @@ export class UsersController {
   @Post('update-profile')
   async updateProfile(@Body() updateData: { email: string; fullName: string; avatar: string }) {
     return this.usersService.updateProfile(updateData.email, updateData.fullName, updateData.avatar);
+  }
+
+  @Post('login')
+  login(@Body() loginDto: any) {
+    return this.usersService.login(loginDto);
   }
 }

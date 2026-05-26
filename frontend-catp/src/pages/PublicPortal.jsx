@@ -1,333 +1,528 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Menu, Row, Col, Card, Typography, Button, Input, Tag, Carousel, Modal, Form, Upload, message, Statistic, Divider, Select, Switch } from 'antd';
-import { SearchOutlined, UserOutlined, EditOutlined, EnvironmentOutlined, UploadOutlined, PhoneOutlined, CheckCircleOutlined, InboxOutlined } from '@ant-design/icons';
+import { Layout, Form, Input, Select, Button, Upload, message, Typography, Row, Col, Avatar, Dropdown, Tag, Space, Switch, Modal, Empty, Spin, Drawer } from 'antd';
+import { 
+  UserOutlined, LogoutOutlined, SendOutlined, 
+  EnvironmentOutlined, UploadOutlined, PhoneOutlined, 
+  SafetyCertificateOutlined, NotificationOutlined, ClockCircleOutlined,
+  FireFilled, PhoneFilled, FilterOutlined 
+} from '@ant-design/icons'; 
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const { Header, Content, Footer } = Layout;
-const { Title, Text, Paragraph } = Typography;
-const { Dragger } = Upload;
+const { Title, Paragraph, Text } = Typography;
 const { Option } = Select;
+const { TextArea } = Input;
 
 const PublicPortal = () => {
-  const [categories, setCategories] = useState([]);
-const [schools, setSchools] = useState([]);
-
-  useEffect(() => {
-    // 1. Lấy danh sách Mảng vi phạm
-    fetch(`${import.meta.env.VITE_API_URL}/reports/categories/list`)
-      .then(res => res.json())
-      .then(data => setCategories(data))
-      .catch(err => console.error("Lỗi tải danh mục:", err));
-
-    // 2. Lấy danh sách Trường học (Từ API units có sẵn của bạn)
-    fetch(`${import.meta.env.VITE_API_URL}/units`)
-      .then(res => res.json())
-      .then(data => {
-        // Lọc ra những đơn vị là Trường học (chứa chữ Đại học, THPT...)
-        const dsTruongHoc = data.filter(u => u.tenDonVi.includes('Đại học') || u.tenDonVi.includes('THPT'));
-        setSchools(dsTruongHoc);
-      })
-      .catch(err => console.error("Lỗi tải đơn vị:", err));
-  }, []);
-
-  const [isModalVisible, setIsModalVisible] = useState(false);
   const [form] = Form.useForm();
+  const userInfo = JSON.parse(localStorage.getItem('catp_user')) || null;
+
+  // States
+  const [categories, setCategories] = useState([]);
+  const [schools, setSchools] = useState([]);
+  const [isSubmitModalVisible, setIsSubmitModalVisible] = useState(false);
+  const [loadingForm, setLoadingForm] = useState(false);
   
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  // 👉 BỔ SUNG: State quản lý chế độ Ẩn danh (Mặc định là true)
+  const [isAnonymous, setIsAnonymous] = useState(true);
+
+  // States cho Tin tức & Phản ánh
+  const [feedData, setFeedData] = useState([]);
+  const [loadingFeed, setLoadingFeed] = useState(true);
+  const [activeFilter, setActiveFilter] = useState('Tất cả'); 
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [searchParams] = useSearchParams();
+  const urlSchoolId = searchParams.get('schoolId');
+
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    fetchData();
   }, []);
+  useEffect(() => {
+    // Đã thay units thành schools
+    if (urlSchoolId && schools && schools.length > 0) {
+      form.setFieldsValue({ school: Number(urlSchoolId) }); 
+    }
+  }, [urlSchoolId, form, schools]); 
 
-  const fakeReports = [
-    { id: 1, title: "Hàng quán lấn chiếm vỉa hè cổng trường Đại học Khoa học", snippet: "Tình trạng bán hàng rong lấn chiếm toàn bộ vỉa hè dành cho người đi bộ, gây ùn tắc giao thông vào giờ tan tầm tại đường Nguyễn Huệ...", image: `${import.meta.env.VITE_API_URL}/uploads/photo1.jpg`, date: "18/05/2026", status: "Đang xử lý", color: "warning" },
-    { id: 2, title: "Hỏng đèn tín hiệu giao thông ngã tư Hùng Vương", snippet: "Đèn đỏ tại ngã tư hướng đi cầu Trường Tiền đã hỏng từ sáng nay, các phương tiện lưu thông lộn xộn nguy hiểm.", image: `${import.meta.env.VITE_API_URL}/uploads/photo2.jpg`, date: "17/05/2026", status: "Hoàn thành", color: "success" },
-    { id: 3, title: "Bãi rác tự phát bốc mùi hôi thối tại KTX Xã Tắc", snippet: "Nhiều ngày nay không có xe thu gom rác, rác thải sinh hoạt chất đống tràn ra đường bốc mùi nghiêm trọng.", image: `${import.meta.env.VITE_API_URL}/uploads/photo3.jpg`, date: "18/05/2026", status: "Chờ tiếp nhận", color: "error" },
-    { id: 4, title: "Cây đổ chắn ngang đường Lê Lợi sau cơn giông", snippet: "Một cây phượng lớn đã bị bật gốc chắn ngang nửa phần đường Lê Lợi đoạn gần ga Huế.", image: `${import.meta.env.VITE_API_URL}/uploads/photo4.jpg`, date: "16/05/2026", status: "Hoàn thành", color: "success" },
-    { id: 5, title: "Nước ngập sâu tại chợ Đông Ba sau mưa lớn", snippet: "Hệ thống thoát nước quá tải khiến nhiều gian hàng trong chợ Đông Ba bị ngập, tiểu thương chật vật di dời đồ đạc.", image: `${import.meta.env.VITE_API_URL}/uploads/photo5.jpg`, date: "15/05/2026", status: "Đang xử lý", color: "warning" },
-  ];
-
-  // 👉 TÁCH RIÊNG MENU: Nếu là Mobile thì ẩn nút Gửi Phản Ánh trên thanh ngang đi
-  const baseMenuItems = [
-    { key: 'home', label: 'Trang chủ' },
-    { key: 'giaothong', label: 'Giao thông' },
-    { key: 'anninh', label: 'An ninh trật tự' },
-    { key: 'moitruong', label: 'Môi trường' },
-    { key: 'tainan', label: 'Tai nạn' },
-    { key: 'khac', label: 'Khác' },
-  ];
-  const menuItems = isMobile 
-    ? baseMenuItems 
-    : [...baseMenuItems, { key: 'submit', label: <span style={{ color: '#d90000', fontWeight: 'bold' }}><EditOutlined /> GỬI PHẢN ÁNH</span> }];
-
-  const showModal = (e) => { if (e.key === 'submit') setIsModalVisible(true); };
-  const handleCancel = () => { setIsModalVisible(false); form.resetFields(); };
-  const onFinish = async (values) => {
-    message.loading({ content: 'Đang xử lý dữ liệu...', key: 'submitReport' });
-    
+  const fetchData = async () => {
     try {
-      let danhSachAnh = []; // Mảng chứa tên các file ảnh sau khi upload thành công
+      const catRes = await fetch(`${import.meta.env.VITE_API_URL}/reports/categories/list`);
+      const catData = await catRes.json();
+      setCategories(catData);
 
-      // 1. KIỂM TRA & UPLOAD ẢNH LÊN SERVER TRƯỚC
-      if (values.images && values.images.length > 0) {
-        message.loading({ content: 'Đang tải ảnh lên hệ thống...', key: 'submitReport' });
-        
-        // Vì mình chưa rõ API của bạn upload từng ảnh hay nhiều ảnh 1 lúc, 
-        // ở đây mình lấy tạm tấm ảnh ĐẦU TIÊN để upload (bạn có thể mở rộng sau)
-        const fileUpload = values.images[0].originFileObj;
-        const formData = new FormData();
-        formData.append('file', fileUpload); // 'file' là tên key thường dùng ở NestJS Multer
+      const unitRes = await fetch(`${import.meta.env.VITE_API_URL}/units`);
+      const unitData = await unitRes.json();
+      setSchools(unitData.filter(u => u.tenDonVi.includes('Đại học') || u.tenDonVi.includes('THPT')));
 
-        const uploadRes = await fetch(`${import.meta.env.VITE_API_URL}/upload`, {
-          method: 'POST',
-          body: formData,
-        });
+      const newsRes = await fetch(`${import.meta.env.VITE_API_URL}/news`);
+      const newsRaw = await newsRes.json();
 
-        if (uploadRes.ok) {
-          const uploadData = await uploadRes.json();
-          
-          // 👉 THÊM DÒNG NÀY: Để soi xem Backend thực sự trả về cái gì
-          console.log("Dữ liệu ảnh Backend trả về:", uploadData);
-          
-          // Bao lô tất cả các trường hợp tên biến mà NestJS hay trả về (filename, fileName, url, path, v.v.)
-          const fileName = uploadData.fileName || uploadData.filename || uploadData.url || uploadData.path || uploadData.data; 
-          
-          // 👉 CHẶN LỖI: Chỉ khi lấy được tên file thật mới nhét vào mảng
-          if (fileName) {
-            danhSachAnh.push(fileName);
-          } else {
-            message.warning('Up ảnh thành công nhưng không lấy được tên file!');
-          }
-        }
+      const reportsRes = await fetch(`${import.meta.env.VITE_API_URL}/reports`);
+      const reportsRaw = await reportsRes.json();
+
+      let combinedFeed = [];
+
+      if (Array.isArray(newsRaw)) {
+        const formattedNews = newsRaw.map(n => ({
+          id: `news-${n.id}`,
+          type: 'Tin tức',
+          title: n.tieuDe,
+          content: n.moTaNgan || n.noiDung,
+          date: new Date(n.ngayDang || Date.now()),
+          image: getImageUrl(n.hinhAnh) || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&q=80', 
+          categoryName: 'Tuyên truyền'
+        }));
+        combinedFeed = [...combinedFeed, ...formattedNews];
       }
 
-      // 2. GOM DỮ LIỆU ĐÃ CÓ ẢNH ĐỂ GỬI VÀO DATABASE
-      const payload = {
-        tieuDe: values.title,
-        noiDung: values.description,
-        diaDiem: values.location,
-        mucDoKhanCap: values.isUrgent || false, 
-        
-        // 👉 ĐÃ SỬA: Bắn ID sang cho Backend thay vì bắn chữ
-        categoryId: values.incidentType,        
-        schoolId: values.school,               
-        
-        sdtNguoiGui: values.phone || "",
-        anhKiemChung: JSON.stringify(danhSachAnh), 
-        trangThai: "Mới", 
-      };
-
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/reports`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (response.ok) {
-        message.success({ content: 'Gửi phản ánh thành công! Đang chờ cán bộ duyệt.', key: 'submitReport', duration: 3 });
-        setIsModalVisible(false);
-        form.resetFields();
-      } else {
-        message.error({ content: 'Lỗi khi lưu dữ liệu!', key: 'submitReport', duration: 3 });
+      if (Array.isArray(reportsRaw)) {
+        const formattedReports = reportsRaw
+          .filter(r => r.trangThai === 'Hoàn thành')
+          .map(r => ({
+              id: `report-${r.id}`,
+              type: 'Phản ánh',
+              title: `[Đã xử lý] ${r.tieuDe}`,
+              content: r.ghiChuKetQua || r.noiDung,
+              date: new Date(r.ngayGui || Date.now()),
+              image: getImageUrl(r.anhKetQua) || getImageUrl(r.anhKiemChung) || 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&q=80',
+              categoryName: r.category ? r.category.tenDanhMuc : 'Khác'
+            }));
+        combinedFeed = [...combinedFeed, ...formattedReports];
       }
+
+      combinedFeed.sort((a, b) => b.date - a.date);
+      setFeedData(combinedFeed);
+      setLoadingFeed(false);
+
     } catch (error) {
-      message.error({ content: 'Lỗi kết nối máy chủ!', key: 'submitReport', duration: 3 });
+      console.error("Lỗi tải dữ liệu:", error);
+      setLoadingFeed(false);
     }
   };
 
-  return (
-    <Layout style={{ minHeight: '100vh', background: '#f5f7fa' }}>
+  const getImageUrl = (imageInput) => {
+    if (!imageInput || (Array.isArray(imageInput) && imageInput.length === 0)) return null;
+
+    let imageUrl = imageInput;
+    if (typeof imageUrl === 'string' && imageUrl.startsWith('[')) {
+      try { imageUrl = JSON.parse(imageUrl); } catch (e) {}
+    }
+    if (Array.isArray(imageUrl)) imageUrl = imageUrl[0];
+    if (!imageUrl || typeof imageUrl !== 'string') return null;
+
+    if (imageUrl.startsWith('http') || imageUrl.startsWith('data:image') || imageUrl.startsWith('blob:')) {
+      return imageUrl;
+    }
+    
+    const baseUrl = import.meta.env.VITE_API_URL.replace(/\/$/, ''); 
+    let imagePath = imageUrl;
+    
+    if (!imagePath.includes('uploads/')) {
+      imagePath = imagePath.startsWith('/') ? `/uploads${imagePath}` : `/uploads/${imagePath}`;
+    } else {
+      imagePath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+    }
+    
+    return `${baseUrl}${imagePath}`;
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('catp_user');
+    window.location.href = '/';
+  };
+
+  const normFile = (e) => {
+    if (Array.isArray(e)) return e;
+    return e?.fileList;
+  };
+
+  const onFinishSubmit = async (values) => {
+    setLoadingForm(true);
+    message.loading({ content: 'Đang gửi...', key: 'submit' });
+    
+    try {
+     const formData = new FormData();
       
-      <Header style={{ background: '#fff', padding: isMobile ? '10px 15px' : '0 50px', display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: 'center', justifyContent: 'space-between', height: 'auto', minHeight: '80px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', zIndex: 1, gap: isMobile ? '10px' : '0' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '20px', width: '100%', justifyContent: isMobile ? 'space-between' : 'flex-start' }}>
-          <Title level={isMobile ? 4 : 3} style={{ margin: 0, color: '#9f224e', fontWeight: 900 }}>HUE<span style={{color: '#333'}}>CONNECT</span></Title>
-          <Text type="secondary" style={{ fontSize: isMobile ? '12px' : '14px' }}><EnvironmentOutlined /> T.T.Huế | 31°C</Text>
+      // Text
+      formData.append('tieuDe', String(values.title));
+      formData.append('noiDung', String(values.description));
+      formData.append('diaDiem', String(values.location || ""));
+      formData.append('trangThai', 'Mới');
+
+      // 👉 ĐÃ SỬA: Ép kiểu Number cho các ID
+      formData.append('categoryId', Number(values.incidentType));
+      formData.append('schoolId', Number(values.school));
+      
+      // 👉 ĐÃ SỬA: Ép kiểu Boolean cho mucDoKhanCap
+      // Lưu ý: class-validator cần giá trị boolean thật sự (true/false)
+      formData.append('mucDoKhanCap', values.isUrgent === true || values.isUrgent === 'true');
+
+      // Xử lý người gửi
+      if (isAnonymous) {
+        formData.append('sdtNguoiGui', ""); 
+      } else {
+        formData.append('sdtNguoiGui', String(values.phone || ""));
+        if (userInfo?.id) formData.append('nguoiGuiId', Number(userInfo.id));
+      }
+
+      // Ảnh
+      if (values.images && values.images.length > 0) {
+        values.images.forEach(img => {
+          if (img.originFileObj) {
+            formData.append('images', img.originFileObj);
+          }
+        });
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/reports`, {
+        method: 'POST',
+        body: formData 
+      });
+
+      const result = await response.json();
+      for (let pair of formData.entries()) {
+        console.log("Đang gửi key:", pair[0], "value:", pair[1]);
+      }
+      if (response.ok) {
+        message.success('Gửi báo cáo thành công!');
+        form.resetFields();
+        setIsSubmitModalVisible(false);
+        fetchData();
+      } else {
+        console.error("Lỗi chi tiết:", result.message);
+        message.error('Lỗi: ' + (Array.isArray(result.message) ? result.message[0] : result.message));
+      }
+    } catch (error) {
+      message.error('Lỗi kết nối!');
+    } finally {
+      setLoadingForm(false);
+    }
+  };
+
+  const filteredFeed = activeFilter === 'Tất cả' 
+    ? feedData 
+    : feedData.filter(item => item.type === activeFilter || item.categoryName === activeFilter);
+
+  const filterTags = ['Tất cả', 'Tuyên truyền', ...categories.map(c => c.tenDanhMuc)];
+
+  const featuredArticle = filteredFeed.length > 0 ? filteredFeed[0] : null;
+  const regularArticles = filteredFeed.length > 1 ? filteredFeed.slice(1) : [];
+
+  return (
+    <Layout style={{ minHeight: '100vh', background: '#fff' }}>
+      {/* HEADER GIỮ NGUYÊN NHƯ CŨ */}
+      <div style={{ background: '#0a3055', color: '#fff', padding: '6px 5%', fontSize: '13px', display: 'flex', justifyContent: 'space-between' }}>
+        <div><Text style={{ color: '#e6f7ff' }}><SafetyCertificateOutlined /> Cổng thông tin Tuyên truyền & Tiếp nhận phản ánh</Text></div>
+        <div><Text style={{ color: '#e6f7ff' }}><PhoneFilled /> Hotline CATP Huế: <b>0234.3xxx.xxx</b> hoặc <b>113</b></Text></div>
+      </div>
+
+      <Header style={{ 
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+        background: '#fff', padding: '0 5%', boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+        position: 'sticky', top: 0, zIndex: 1000, height: '72px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <Title level={3} style={{ margin: 0, color: '#0a3055', fontFamily: 'serif', letterSpacing: '0.5px' }}>AN NINH HỌC ĐƯỜNG</Title>
         </div>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', width: '100%', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
-          <Input placeholder="Tìm kiếm..." prefix={<SearchOutlined />} style={{ width: isMobile ? '60%' : 250, borderRadius: '20px' }} />
-          <Button type="primary" shape="round" icon={<UserOutlined />} style={{ background: '#9f224e' }}>{'Đăng nhập'}</Button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <Button 
+            type="primary" 
+            icon={<SendOutlined />} 
+            onClick={() => setIsSubmitModalVisible(true)}
+            style={{ background: '#e11d48', border: 'none', height: '40px', fontWeight: 'bold', borderRadius: '6px', boxShadow: '0 4px 10px rgba(225, 29, 72, 0.3)' }}
+          >
+            {window.innerWidth > 768 ? 'GỬI PHẢN ÁNH' : 'GỬI'}
+          </Button>
+
+          {userInfo ? (
+            <Space size="middle">
+              <Dropdown menu={{
+                items: [
+                  { key: 'info', disabled: true, label: <div style={{ color: '#333' }}><b>{userInfo.fullName || 'Người dân'}</b><br/><span style={{fontSize:'12px', color:'#888'}}>{userInfo.email}</span></div> },
+                  { key: 'score', disabled: true, label: <div style={{ color: userInfo.diemUyTin >= 50 ? '#52c41a' : '#ff4d4f' }}><b>⭐ Điểm uy tín: {userInfo.diemUyTin}</b></div> },
+                  { type: 'divider' },
+                  { key: 'logout', icon: <LogoutOutlined />, danger: true, label: 'Đăng xuất', onClick: handleLogout },
+                ]
+              }} placement="bottomRight" trigger={['click']}>
+                <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '8px' }}>
+                  <Avatar src={userInfo.avatar} icon={!userInfo.avatar && <UserOutlined />} style={{ backgroundColor: '#0a3055' }} />
+                </div>
+              </Dropdown>
+            </Space>
+          ) : (
+            <Button type="default" onClick={() => window.location.href = '/login'}>Đăng nhập</Button>
+          )}
         </div>
       </Header>
 
-      {/* 👉 CẬP NHẬT MENU: Cấm tràn (disabledOverflow) và làm mượt thanh trượt */}
-      <Menu 
-        mode="horizontal" 
-        items={menuItems} 
-        onClick={showModal} 
-        disabledOverflow={true} /* BÍ QUYẾT XÓA DẤU 3 CHẤM Ở ĐÂY */
-        style={{ 
-          justifyContent: isMobile ? 'flex-start' : 'center', 
-          fontWeight: 600, 
-          fontSize: isMobile ? '14px' : '16px', 
-          position: 'sticky', 
-          top: 0, 
-          zIndex: 2, 
-          borderBottom: '3px solid #9f224e',
-          overflowX: 'auto', 
-          display: 'flex',
-          flexWrap: 'nowrap', 
-          WebkitOverflowScrolling: 'touch', // Trượt siêu mượt trên iPhone
-          scrollbarWidth: 'none', // Ẩn thanh cuộn xấu xí trên web
-        }} 
-      />
+      {/* NỘI DUNG TIN TỨC GIỮ NGUYÊN NHƯ CŨ */}
+      <Content style={{ padding: '30px 5%', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+        <div style={{ 
+          display: 'flex', overflowX: 'auto', whiteSpace: 'nowrap', 
+          paddingBottom: '16px', marginBottom: '24px', borderBottom: '2px solid #f0f0f0',
+          WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none'
+        }}>
+          {filterTags.map(tag => (
+            <span
+              key={tag}
+              onClick={() => setActiveFilter(tag)}
+              style={{ 
+                fontSize: '15px', fontWeight: activeFilter === tag ? 'bold' : '500', 
+                color: activeFilter === tag ? '#e11d48' : '#555',
+                marginRight: '24px', cursor: 'pointer', position: 'relative',
+                paddingBottom: '12px'
+              }}
+            >
+              {tag}
+              {activeFilter === tag && (
+                <div style={{ position: 'absolute', bottom: '-2px', left: 0, right: 0, height: '2px', background: '#e11d48' }} />
+              )}
+            </span>
+          ))}
+        </div>
 
-      <Content style={{ padding: isMobile ? '15px' : '30px 50px', maxWidth: '1300px', margin: '0 auto', width: '100%' }}>
-        <Carousel autoplay effect="fade" style={{ marginBottom: isMobile ? '20px' : '40px', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-          <div><div style={{ height: isMobile ? '200px' : '350px', backgroundImage: `url(${import.meta.env.VITE_API_URL}/uploads/photo4.jpg)`, backgroundPosition: 'center', backgroundSize: 'cover', backgroundRepeat: 'no-repeat' }}></div></div>
-          <div><div style={{ height: isMobile ? '200px' : '350px', backgroundImage: `url(${import.meta.env.VITE_API_URL}/uploads/photo5.jpg)`, backgroundPosition: 'center', backgroundSize: 'cover', backgroundRepeat: 'no-repeat' }}></div></div>
-        </Carousel>
+        {loadingFeed ? (
+          <div style={{ textAlign: 'center', padding: '100px' }}><Spin size="large" /></div>
+        ) : filteredFeed.length === 0 ? (
+          <Empty description="Chưa có bản tin nào trong chuyên mục này" style={{ padding: '50px' }} />
+        ) : (
+          <>
+            {featuredArticle && (
+              <Row gutter={[32, 32]} style={{ marginBottom: '40px' }}>
+                <Col xs={24} md={16}>
+                  <div style={{ overflow: 'hidden', borderRadius: '8px', cursor: 'pointer' }}>
+                    <img 
+                      src={featuredArticle.image} 
+                      alt={featuredArticle.title} 
+                      style={{ width: '100%', height: window.innerWidth > 768 ? '400px' : '250px', objectFit: 'cover', transition: 'transform 0.5s' }}
+                      onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                      onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+                    />
+                  </div>
+                </Col>
+                <Col xs={24} md={8} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <Tag color={featuredArticle.type === 'Tin tức' ? 'blue' : 'green'} style={{ alignSelf: 'flex-start', marginBottom: '12px' }}>
+                    {featuredArticle.categoryName}
+                  </Tag>
+                  <Title level={2} style={{ marginTop: 0, fontFamily: 'serif', lineHeight: 1.3, color: '#111' }}>
+                    {featuredArticle.title}
+                  </Title>
+                  <Paragraph style={{ fontSize: '16px', color: '#555', lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {featuredArticle.content}
+                  </Paragraph>
+                  <Text type="secondary" style={{ marginTop: 'auto' }}><ClockCircleOutlined /> {featuredArticle.date.toLocaleDateString('vi-VN')}</Text>
+                </Col>
+              </Row>
+            )}
 
-        <Row gutter={[24, 24]}>
-          <Col xs={24} lg={16}>
-            <Title level={4} style={{ borderLeft: '5px solid #9f224e', paddingLeft: '12px', marginBottom: '20px' }}>TIN HIỆN TRƯỜNG</Title>
-            <Card hoverable cover={<div style={{ height: isMobile ? '220px' : '350px', backgroundImage: `url(${fakeReports[0].image})`, backgroundSize: 'cover', backgroundPosition: 'center' }}></div>} bodyStyle={{ padding: '20px' }} bordered={false} style={{ marginBottom: '24px', borderRadius: '12px', overflow: 'hidden' }}>
-              <Tag color={fakeReports[0].color} style={{ marginBottom: '10px' }}>{fakeReports[0].status}</Tag>
-              <Title level={isMobile ? 4 : 3} style={{ marginBottom: '10px', lineHeight: 1.3 }}>{fakeReports[0].title}</Title>
-              <Paragraph style={{ fontSize: '15px', color: '#555' }}>{fakeReports[0].snippet}</Paragraph>
-              <Text type="secondary">{fakeReports[0].date}</Text>
-            </Card>
-
-            <Row gutter={[16, 16]}>
-              {fakeReports.slice(1).map(report => (
-                <Col xs={24} sm={12} key={report.id}>
-                  <Card hoverable cover={<div style={{ height: '180px', backgroundImage: `url(${report.image})`, backgroundSize: 'cover', backgroundPosition: 'center' }}></div>} bordered={false} style={{ borderRadius: '12px', overflow: 'hidden', height: '100%' }}>
-                    <Tag color={report.color} style={{ marginBottom: '10px' }}>{report.status}</Tag>
-                    <Title level={5} style={{ margin: '0 0 10px 0', minHeight: '45px', lineHeight: 1.4 }}>{report.title}</Title>
-                    <Text type="secondary">{report.date}</Text>
-                  </Card>
+            <Row gutter={[24, 40]}>
+              {regularArticles.map(item => (
+                <Col xs={24} sm={12} md={8} key={item.id}>
+                  <div style={{ cursor: 'pointer', group: 'true' }}>
+                    <div style={{ overflow: 'hidden', borderRadius: '6px', marginBottom: '12px', position: 'relative' }}>
+                      <img 
+                        src={item.image} 
+                        alt={item.title} 
+                        style={{ width: '100%', height: '200px', objectFit: 'cover', transition: 'transform 0.5s' }}
+                        onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                        onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+                      />
+                      {item.type === 'Phản ánh' && (
+                        <div style={{ position: 'absolute', top: '8px', left: '8px', background: 'rgba(82, 196, 26, 0.9)', color: '#fff', padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>
+                          ĐÃ XỬ LÝ
+                        </div>
+                      )}
+                    </div>
+                    <Title level={4} style={{ margin: '0 0 8px 0', fontFamily: 'serif', lineHeight: 1.4, color: '#222' }}>
+                      {item.title}
+                    </Title>
+                    <Paragraph style={{ color: '#666', fontSize: '14px', margin: '0 0 8px 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {item.content}
+                    </Paragraph>
+                    <div style={{ fontSize: '12px', color: '#999', display: 'flex', justifyContent: 'space-between' }}>
+                      <span><FireFilled style={{ color: '#bfbfbf' }} /> {item.categoryName}</span>
+                      <span>{item.date.toLocaleDateString('vi-VN')}</span>
+                    </div>
+                  </div>
                 </Col>
               ))}
             </Row>
-          </Col>
-
-          <Col xs={24} lg={8}>
-            <Card bordered={false} style={{ borderRadius: '12px', marginBottom: '24px', background: '#9f224e', color: 'white' }}>
-              <Title level={5} style={{ color: 'white', textAlign: 'center', marginTop: 0 }}><PhoneOutlined /> ĐƯỜNG DÂY NÓNG</Title>
-              <Title level={isMobile ? 3 : 2} style={{ color: '#ffd700', textAlign: 'center', margin: '10px 0' }}>1900 1234</Title>
-              <p style={{ textAlign: 'center', margin: 0 }}>Trực ban 24/7 Công an TP. Huế</p>
-            </Card>
-
-            <Card bordered={false} style={{ borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-              <Title level={5} style={{ borderBottom: '2px solid #f0f0f0', paddingBottom: '10px' }}>📊 THỐNG KÊ TRONG TUẦN</Title>
-              <Row gutter={16} style={{ marginTop: '20px' }}>
-                <Col span={12}><Statistic title="Đã tiếp nhận" value={128} prefix={<InboxOutlined />} valueStyle={{ fontSize: isMobile ? '20px' : '24px' }} /></Col>
-                <Col span={12}><Statistic title="Đã giải quyết" value={112} prefix={<CheckCircleOutlined />} valueStyle={{ color: '#3f8600', fontSize: isMobile ? '20px' : '24px' }} /></Col>
-              </Row>
-              <Divider />
-              {/* Nút gửi ẩn trên Mobile vì đã có nút nổi */}
-              {!isMobile && (
-                <Button type="primary" block size="large" onClick={() => setIsModalVisible(true)} style={{ background: '#9f224e', height: '50px', fontSize: '16px', fontWeight: 'bold' }}>
-                  <EditOutlined /> TẠO PHẢN ÁNH
-                </Button>
-              )}
-            </Card>
-          </Col>
-        </Row>
+          </>
+        )}
       </Content>
 
-      <Modal title={<Title level={4} style={{ margin: 0, color: '#9f224e' }}>GỬI BÁO CÁO HIỆN TRƯỜNG</Title>} open={isModalVisible} onCancel={handleCancel} footer={null} width={750} style={{ top: isMobile ? 10 : 50 }}>
-        <Form form={form} layout="vertical" onFinish={onFinish} style={{ marginTop: '20px' }} initialValues={{ isUrgent: false }}>
+      <Footer style={{ textAlign: 'center', background: '#f0f2f5', color: '#888', padding: '30px 50px', borderTop: '1px solid #e8e8e8' }}>
+        Công an Thành phố Huế ©2026 - Cổng thông tin Tuyến truyền Pháp luật & Tiếp nhận phản ánh
+      </Footer>
+
+      {/* ================= MODAL GỬI PHẢN ÁNH CÓ TÍNH NĂNG ẨN DANH ================= */}
+      <Modal
+        title={<div style={{ fontSize: '18px', color: '#0a3055' }}><NotificationOutlined /> Cung cấp thông tin phản ánh</div>}
+        open={isSubmitModalVisible}
+        onCancel={() => { setIsSubmitModalVisible(false); form.resetFields(); setIsAnonymous(true); }}
+        footer={null} 
+        width={700}
+        centered
+      >
+        <Form form={form} layout="vertical" onFinish={onFinishSubmit} size="large" initialValues={{ isUrgent: false }}>
           
-          <Row gutter={16}>
-            <Col xs={24} sm={16}>
-              <Form.Item label="Tiêu đề vụ việc" name="title" rules={[{ required: true, message: 'Vui lòng nhập tiêu đề!' }]}><Input placeholder="Ví dụ: Đánh nhau cổng trường, Thuốc lá điện tử..." size="large" /></Form.Item>
-            </Col>
-            <Col xs={24} sm={8}>
-              {/* Theo Mục 4: Phân loại mức độ khẩn cấp */}
-              <Form.Item label={<span style={{color: 'red', fontWeight: 'bold'}}>Mức độ khẩn cấp?</span>} name="isUrgent" valuePropName="checked">
-                <Switch checkedChildren="Khẩn cấp" unCheckedChildren="Bình thường" style={{ marginTop: '5px' }} />
-              </Form.Item>
-            </Col>
-          </Row>
+          {/* 👉 UI CÔNG TẮC ẨN DANH / CÔNG KHAI */}
+          <div style={{ padding: '16px', background: isAnonymous ? '#f6ffed' : '#e6f7ff', borderRadius: '8px', marginBottom: '20px', border: isAnonymous ? '1px solid #b7eb8f' : '1px solid #91d5ff', transition: 'all 0.3s' }}>
+            <Row align="middle" justify="space-between">
+              <Col xs={18}>
+                <b style={{ color: isAnonymous ? '#389e0d' : '#005bac', fontSize: '15px' }}>
+                  <UserOutlined /> Chế độ gửi: {isAnonymous ? 'Ẩn danh (Bảo mật)' : 'Công khai danh tính'}
+                </b>
+                <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                  {isAnonymous ? 'Thông tin cá nhân của bạn sẽ được giữ kín hoàn toàn.' : 'Cơ quan chức năng có thể liên hệ bạn để xác minh.'}
+                </div>
+              </Col>
+              <Col xs={6} style={{ textAlign: 'right' }}>
+                <Switch 
+                  checked={isAnonymous} 
+                  onChange={(checked) => setIsAnonymous(checked)} 
+                  checkedChildren="Ẩn" 
+                  unCheckedChildren="Hiện" 
+                />
+              </Col>
+            </Row>
+
+            {/* Form nhập thông tin hiện ra nếu tắt Ẩn danh */}
+            {!isAnonymous && (
+              <Row gutter={16} style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px dashed #d9d9d9' }}>
+                <Col xs={24} sm={12}>
+                  <Form.Item label="Họ và Tên của bạn" name="senderName" rules={[{ required: true, message: 'Vui lòng nhập tên!' }]}>
+                    <Input placeholder="Nhập họ và tên thật..." />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <Form.Item label="Số điện thoại liên hệ" name="phone" rules={[{ required: true, message: 'Vui lòng nhập SĐT!' }]}>
+                    <Input prefix={<PhoneOutlined style={{ color: '#bfbfbf' }}/>} placeholder="Nhập số điện thoại..." />
+                  </Form.Item>
+                </Col>
+              </Row>
+            )}
+          </div>
 
           <Row gutter={16}>
             <Col xs={24} sm={12}>
-              <Form.Item label="Nhóm vụ việc" name="incidentType" rules={[{ required: true, message: 'Chọn nhóm vụ việc!' }]}>
-                <Select placeholder="-- Chọn loại vi phạm --" size="large">
-                  {/* Tự động in ra từ Database */}
-                  {categories.map(cat => (
-                    <Option key={cat.id} value={cat.id}>{cat.tenDanhMuc}</Option>
-                  ))}
+              <Form.Item label="Nhóm vụ việc" name="incidentType" rules={[{ required: true, message: 'Vui lòng chọn!' }]}>
+                <Select placeholder="-- Chọn loại vi phạm --">
+                  {categories.map(cat => <Option key={cat.id} value={cat.id}>{cat.tenDanhMuc}</Option>)}
                 </Select>
               </Form.Item>
             </Col>
-            
             <Col xs={24} sm={12}>
-              <Form.Item label="Thuộc trường/Cơ sở" name="school" rules={[{ required: true, message: 'Chọn trường học!' }]}>
-                <Select placeholder="-- Chọn trường học --" size="large" showSearch>
-                  {/* Tự động in ra từ Database */}
-                  {schools.map(school => (
-                    <Option key={school.id} value={school.id}>{school.tenDonVi}</Option>
-                  ))}
-                </Select>
+              <Form.Item
+  label="Trường học"
+  name="school"
+  rules={[{ required: true, message: 'Vui lòng chọn trường học!' }]}
+>
+  <Select 
+    placeholder="-- Chọn trường học --" 
+    showSearch
+    // 👉 THÊM DÒNG NÀY VÀO:
+    disabled={!!urlSchoolId} // Khóa ô này lại nếu trên URL có truyền schoolId
+  >
+    {/* Vòng lặp map danh sách trường học của bạn giữ nguyên */}
+    {schools.map(school => (
+      <Select.Option key={school.id} value={school.id}>
+        {school.tenDonVi}
+      </Select.Option>
+    ))}
+  </Select>
+</Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item label="Tiêu đề vụ việc" name="title" rules={[{ required: true, message: 'Nhập tiêu đề!' }]}>
+            <Input placeholder="Ví dụ: Bạo lực học đường tại cổng trường..." />
+          </Form.Item>
+
+          <Form.Item label="Nội dung chi tiết" name="description" rules={[{ required: true, message: 'Mô tả sự việc!' }]}>
+            <TextArea rows={3} placeholder="Vui lòng mô tả chi tiết sự việc, đặc điểm nhận dạng..." />
+          </Form.Item>
+
+          <Form.Item label="Địa điểm cụ thể" name="location">
+            <Input prefix={<EnvironmentOutlined style={{ color: '#bfbfbf' }}/>} placeholder="Số nhà, đường..." />
+          </Form.Item>
+
+          <Row align="middle" justify="space-between" style={{ marginBottom: '16px' }}>
+            <Col><b style={{ color: '#cf1322' }}>Đánh dấu mức độ Khẩn cấp?</b></Col>
+            <Col>
+              <Form.Item name="isUrgent" valuePropName="checked" style={{ margin: 0 }}>
+                <Switch checkedChildren="CÓ" unCheckedChildren="KHÔNG" />
               </Form.Item>
             </Col>
           </Row>
 
-          <Row gutter={16}>
-            <Col xs={24} sm={12}>
-              <Form.Item label="Vị trí / Lớp học (Chi tiết)" name="location" rules={[{ required: true, message: 'Nhập vị trí cụ thể!' }]}><Input prefix={<EnvironmentOutlined />} placeholder="VD: Lớp 10A1, Cổng phụ..." size="large" /></Form.Item>
-            </Col>
-            <Col xs={24} sm={12}>
-              {/* Theo Mục 6: Bảo mật thông tin người phản ánh */}
-              <Form.Item label="Số điện thoại / Zalo (Sẽ được bảo mật)" name="phone"><Input prefix={<PhoneOutlined />} placeholder="Để CA liên hệ hỗ trợ" size="large" /></Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item label="Mô tả chi tiết diễn biến" name="description" rules={[{ required: true, message: 'Vui lòng mô tả!' }]}><Input.TextArea rows={3} placeholder="Mô tả rõ sự việc đang diễn ra, đặc điểm người vi phạm..." /></Form.Item>
-          
-          {/* 👉 ĐÃ SỬA: Thêm name="images" và cách lấy dữ liệu file */}
           <Form.Item 
-            label="Hình ảnh/Video minh chứng (Rất quan trọng)" 
-            name="images"
-            valuePropName="fileList"
-            getValueFromEvent={(e) => {
-              if (Array.isArray(e)) { return e; }
-              return e?.fileList;
-            }}
-          >
-            <Dragger multiple={true} listType="picture" beforeUpload={() => false}>
-              <p className="ant-upload-drag-icon"><UploadOutlined style={{ color: '#9f224e' }} /></p>
-              <p className="ant-upload-text">Nhấp hoặc kéo thả ảnh vào khu vực này</p>
-              <p className="ant-upload-hint">Đính kèm ảnh hiện trường giúp cơ quan chức năng xử lý nhanh hơn.</p>
-            </Dragger>
+            label="Hình ảnh/Video bằng chứng (Tùy chọn)" 
+            name="images" 
+            valuePropName="fileList" 
+            getValueFromEvent={normFile} 
+            style={{ marginBottom: '24px' }}
+            >
+            <Upload beforeUpload={() => false} listType="picture" multiple>
+              <Button icon={<UploadOutlined />}>Tải ảnh lên</Button>
+            </Upload>
           </Form.Item>
 
-          <Form.Item style={{ textAlign: 'right', marginTop: '20px', marginBottom: 0 }}>
-            <Button onClick={handleCancel} style={{ marginRight: '10px' }} size="large">Hủy bỏ</Button>
-            <Button type="primary" htmlType="submit" size="large" style={{ background: '#9f224e' }}>GỬI PHẢN ÁNH NGAY</Button>
-          </Form.Item>
+          <Button type="primary" htmlType="submit" loading={loadingForm} block style={{ background: '#e11d48', border: 'none', height: '45px', fontSize: '16px', borderRadius: '6px' }}>
+            GỬI THÔNG TIN BÁO CÁO
+          </Button>
         </Form>
       </Modal>
 
-      <Footer style={{ textAlign: 'center', background: '#2c3e50', color: 'white', padding: isMobile ? '15px' : '20px', fontSize: isMobile ? '12px' : '14px' }}>
-        <strong>HUE CONNECT</strong> - Cổng thông tin phản ánh hiện trường<br/>
-      </Footer>
-
-      {/* 👉 NÚT NỔI BẬT DÀNH RIÊNG CHO MOBILE (Floating Action Button) */}
-      {isMobile && (
+      {/* SIDEBAR VÀ NÚT FILTER MOBILE GIỮ NGUYÊN */}
+      {window.innerWidth < 768 && (
         <Button 
           type="primary" 
           shape="circle" 
-          icon={<EditOutlined style={{ fontSize: '24px' }} />} 
+          icon={<FilterOutlined />} 
           size="large"
-          onClick={() => setIsModalVisible(true)}
-          style={{
-            position: 'fixed', // Ghim chặt lên màn hình
-            bottom: '20px',    // Cách đáy 20px
-            right: '20px',     // Cách lề phải 20px
-            zIndex: 999,       // Luôn nổi lên trên cùng
-            background: '#9f224e',
-            border: 'none',
-            width: '60px',
-            height: '60px',
-            boxShadow: '0 4px 12px rgba(159,34,78,0.4)', // Đổ bóng cho đẹp
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
+          onClick={() => setIsFilterDrawerOpen(true)}
+          style={{ 
+            position: 'fixed', bottom: '24px', left: '24px', zIndex: 999, 
+            background: '#0a3055', border: 'none', width: '50px', height: '50px',
+            boxShadow: '0 4px 12px rgba(10, 48, 85, 0.4)'
           }}
         />
       )}
+
+      <Drawer
+        title={<div style={{ color: '#0a3055', fontWeight: 'bold' }}><FilterOutlined /> Chọn Chuyên Mục</div>}
+        placement="left" 
+        onClose={() => setIsFilterDrawerOpen(false)}
+        open={isFilterDrawerOpen}
+        width={260}
+        styles={{ body: { padding: 0 } }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {filterTags.map(tag => (
+            <div
+              key={tag}
+              onClick={() => {
+                setActiveFilter(tag);
+                setIsFilterDrawerOpen(false); 
+              }}
+              style={{
+                padding: '16px 24px',
+                borderBottom: '1px solid #f0f0f0',
+                background: activeFilter === tag ? '#e6f7ff' : '#fff',
+                color: activeFilter === tag ? '#e11d48' : '#333',
+                fontWeight: activeFilter === tag ? 'bold' : '500',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              {tag}
+            </div>
+          ))}
+        </div>
+      </Drawer>
     </Layout>
   );
 };

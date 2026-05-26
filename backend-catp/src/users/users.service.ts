@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
@@ -35,5 +35,30 @@ export class UsersService {
       console.error('Lỗi Update Profile:', error);
       return { success: false, message: 'Lỗi máy chủ: ' + error.message };
     }
+  }
+  async login(loginDto: any) {
+    const { email, password } = loginDto;
+
+    // 1. Tìm user theo email
+    const user = await this.userRepository.findOne({ where: { email } });
+
+    // 2. Kiểm tra xem user có tồn tại và mật khẩu có khớp không
+    if (!user || user.password !== password) {
+      throw new UnauthorizedException('Email hoặc mật khẩu không chính xác!');
+    }
+
+    // 3. Kiểm tra xem tài khoản có bị khóa không
+    if (!user.isActive) {
+      throw new UnauthorizedException('Tài khoản này đã bị khóa!');
+    }
+
+    // 4. Bóc tách mật khẩu ra, không trả về mật khẩu cho Frontend để bảo mật
+    const { password: _, ...userInfo } = user;
+    
+    // Trả về thông tin user (để Frontend biết là admin, unit hay người dân)
+    return {
+      message: 'Đăng nhập thành công',
+      user: userInfo
+    };
   }
 }

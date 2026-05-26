@@ -2,12 +2,15 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Unit } from './entities/unit.entity';
+import { PhuongXa } from './entities/phuong-xa.entity';
 
 @Injectable()
 export class UnitsService {
   constructor(
     @InjectRepository(Unit)
     private unitsRepository: Repository<Unit>,
+    @InjectRepository(PhuongXa)
+    private phuongXaRepository: Repository<PhuongXa>
   ) {}
 
   // 1. THÊM MỚI (Có kiểm tra trùng tên)
@@ -27,8 +30,12 @@ export class UnitsService {
   }
 
   // 2. LẤY DANH SÁCH
-  findAll() {
-    return this.unitsRepository.find();
+  async findAll() {
+    return await this.unitsRepository.find({
+      // 👉 THÊM DÒNG NÀY: Bảo TypeORM tự động JOIN sang bảng phuong_xa
+      relations: ['phuongXa'], 
+      order: { id: 'DESC' }
+    });
   }
 
   // 3. SỬA ĐƠN VỊ
@@ -40,5 +47,8 @@ export class UnitsService {
   // 4. XÓA ĐƠN VỊ
   async remove(id: number) {
     return this.unitsRepository.delete(id);
+  }
+  async getAllPhuongXa() {
+    return await this.phuongXaRepository.find();
   }
 }
