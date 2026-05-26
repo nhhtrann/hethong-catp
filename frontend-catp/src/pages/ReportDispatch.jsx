@@ -266,21 +266,40 @@ const ReportDispatch = () => {
       fixed: 'right', 
       width: 80,
       align: 'center',
-      render: (_, record) => (
+      render: (_, record) => {
         
-        <Space size={0}>
-          <Button 
-            type="text" size="small"
-            icon={<EyeOutlined style={{ color: '#1890ff', fontSize: '16px' }} />} 
-            onClick={() => { setSelectedRecord(record); setIsModalVisible(true); }}
-          />
-          <Button 
-            type="text" size="small"
-            icon={<DeleteOutlined style={{ color: '#ff4d4f', fontSize: '16px' }} />} 
-            onClick={() => confirmDelete([record.id])} 
-          />
-        </Space>
-      ),
+        // 👉 THÊM HÀM NÀY: Dùng để gọi API lấy bản ghi chi tiết (có chứa ảnh)
+        const handleViewDetail = async () => {
+          try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/reports/${record.id}`);
+            if (res.ok) {
+              const fullReportData = await res.json();
+              // Đưa dữ liệu đầy đủ (có ảnh) vào State và mở Modal
+              setSelectedRecord(fullReportData);
+              setIsModalVisible(true);
+            }
+          } catch (error) {
+            console.error("Lỗi khi tải chi tiết vụ việc:", error);
+          }
+        };
+
+        return (
+          // 👉 GIỮ NGUYÊN 100% thẻ Space, cấu trúc Button và nút Xóa của bạn
+          <Space size={0}>
+            <Button 
+              type="text" size="small"
+              icon={<EyeOutlined style={{ color: '#1890ff', fontSize: '16px' }} />} 
+              // 👉 CHỈ SỬA CLICK Ở NÚT NÀY
+              onClick={handleViewDetail} 
+            />
+            <Button 
+              type="text" size="small"
+              icon={<DeleteOutlined style={{ color: '#ff4d4f', fontSize: '16px' }} />} 
+              onClick={() => confirmDelete([record.id])} 
+            />
+          </Space>
+        );
+      },
     },
   ];
 

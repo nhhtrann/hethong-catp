@@ -40,10 +40,15 @@ export class ReportsService {
       }
     }
 
+    let processedImages: string[] = [];
+    if (images && images.length > 0) {
+      processedImages = images.map(img => img.filename ? img.filename : img);
+    }
+
     const newReport = this.reportsRepository.create({
       ...createReportDto, // Kế thừa toàn bộ thuộc tính chuẩn từ DTO
       trangThai: createReportDto.trangThai || 'Mới',
-      images: images || [],
+      anhKiemChung: JSON.stringify(processedImages),
       school: createReportDto.schoolId ? { id: Number(createReportDto.schoolId) } : null,
       nguoiGui: createReportDto.nguoiGuiId ? { id: Number(createReportDto.nguoiGuiId) } : null,
       phuongXa: phuongXaId ? { id: phuongXaId } : null,

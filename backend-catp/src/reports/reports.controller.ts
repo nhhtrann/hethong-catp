@@ -3,13 +3,24 @@ import { FilesInterceptor } from '@nestjs/platform-express'; // Import cái này
 import { ReportsService } from './reports.service';
 import { CreateReportDto } from './dto/create-report.dto';
 import { UpdateReportDto } from './dto/update-report.dto';
+import { diskStorage } from 'multer';
+import { extname } from 'path/win32';
 
 @Controller('reports')
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
-  @Post()
-  @UseInterceptors(FilesInterceptor('images'))
+ @Post()
+  // 👉 BẠN PHẢI THÊM ĐOẠN NÀY ĐỂ ÉP NÓ LƯU FILE VÀO THƯ MỤC UPLOADS
+  @UseInterceptors(FilesInterceptor('images', 5, { // 'files' hoặc 'images' tùy code frontend của bạn gửi lên
+    storage: diskStorage({
+      destination: './uploads',
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
+      }
+    })
+  }))
   async create(
     @Body() createReportDto: CreateReportDto, 
     @UploadedFiles() files: Array<Express.Multer.File>

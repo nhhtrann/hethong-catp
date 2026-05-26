@@ -19,9 +19,7 @@ async function bootstrap() {
     transform: true, 
   }));
 
-  app.useStaticAssets(join(process.cwd(), 'uploads'), {
-    prefix: '/uploads',
-  });
+  app.useStaticAssets(join(__dirname, '..', 'uploads'));
 
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ extended: true, limit: '50mb' }));
