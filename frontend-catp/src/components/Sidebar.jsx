@@ -6,7 +6,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   DashboardOutlined, InboxOutlined, FileTextOutlined,
   BankOutlined, BarChartOutlined, NotificationOutlined,
-  MenuOutlined
+  MenuOutlined, HomeOutlined, ArrowLeftOutlined
 } from '@ant-design/icons';
 
 import logoMobi from '../uploads/logo.jpg'; 
@@ -15,7 +15,17 @@ const { Sider } = Layout;
 const { Text } = Typography;
 
 const Sidebar = ({ role }) => {
-  const [collapsed, setCollapsed] = useState(true);
+  // Lấy trạng thái cũ từ bộ nhớ, nếu chưa có thì: PC mặc định mở (false), Mobile mặc định đóng (true)
+  const [collapsed, setCollapsed] = useState(() => {
+    const savedState = localStorage.getItem('sidebar_collapsed');
+    if (savedState !== null) return JSON.parse(savedState);
+    return window.innerWidth < 992; 
+  });
+
+  // Mỗi khi Siderbar thu/mở, lưu ngay trạng thái đó vào bộ nhớ
+  useEffect(() => {
+    localStorage.setItem('sidebar_collapsed', JSON.stringify(collapsed));
+  }, [collapsed]);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 992);
   const sidebarRef = useRef(null); 
   
@@ -134,23 +144,46 @@ const Sidebar = ({ role }) => {
           />
         </div>
 
-        {/* Chân trang Sider */}
-        {!collapsed && (
-          <div style={{
-            padding: '20px',
-            background: '#f9f9f9', 
-            borderTop: '1px solid #f0f0f0',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px',
-            fontSize: '13px',
-            color: '#595959',
-          }}>
-            <Text style={{ fontSize: '12px', color: '#8c8c8c' }}>Phiên bản 1.0.0</Text>
-            <Text type="secondary" style={{ fontWeight: '500' }}>Hệ thống Quản lý CATP</Text>
+        {/* 👉 ĐÃ SỬA: Bổ sung nút Về Cổng Phản Ánh ở cuối Sidebar */}
+      {!collapsed && (
+        <div style={{
+          padding: '20px',
+          background: '#f9f9f9', 
+          borderTop: '1px solid #f0f0f0',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+        }}>
+          {/* Nút Về Cổng phản ánh */}
+          <div 
+            onClick={() => window.location.href = '/'}
+            style={{
+              padding: '10px 16px',
+              background: '#e6f7ff',
+              border: '1px solid #91d5ff',
+              borderRadius: '8px',
+              color: '#005bac',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.2s'
+            }}
+            onMouseOver={(e) => { e.currentTarget.style.background = '#bae7ff'; }}
+            onMouseOut={(e) => { e.currentTarget.style.background = '#e6f7ff'; }}
+          >
+            <ArrowLeftOutlined /> Cổng Phản Ánh
           </div>
-        )}
-      </Sider>
+
+          {/* Dòng chữ phiên bản cũ (Thu nhỏ lại) */}
+          <div style={{ display: 'flex', flexDirection: 'column', fontSize: '11px', color: '#8c8c8c' }}>
+            <Text style={{ fontSize: '11px', color: '#8c8c8c' }}>Phiên bản 1.0.0</Text>
+            <Text type="secondary" style={{ fontWeight: '500', fontSize: '12px' }}>Hệ thống Quản lý CATP</Text>
+          </div>
+        </div>
+      )}
+    </Sider>
     </div>
   );
 };

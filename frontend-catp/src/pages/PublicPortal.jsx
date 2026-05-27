@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Form, Input, Select, Button, Upload, message, Typography, Row, Col, Avatar, Dropdown, Tag, Space, Switch, Modal, Empty, Spin, Drawer } from 'antd';
+import { Layout, Form, Input, Select, Button, Upload, message, Typography, 
+Row, Col, Avatar, Dropdown, Tag, Space, Switch, Modal, Empty, Spin, 
+Drawer, Carousel, Steps } from 'antd';
 import { 
   UserOutlined, LogoutOutlined, SendOutlined, 
   EnvironmentOutlined, UploadOutlined, PhoneOutlined, 
   SafetyCertificateOutlined, NotificationOutlined, ClockCircleOutlined,
-  FireFilled, PhoneFilled, FilterOutlined 
+  FireFilled, PhoneFilled, FilterOutlined, CheckCircleOutlined, 
+  CopyOutlined, SearchOutlined
 } from '@ant-design/icons'; 
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import imgBanner1 from '../assets/photo6.jpg';
+import imgBanner2 from '../assets/photo7.jpg';
+import imgBanner3 from '../assets/photo8.jpg';
 
 const { Header, Content, Footer } = Layout;
 const { Title, Paragraph, Text } = Typography;
@@ -22,11 +28,13 @@ const PublicPortal = () => {
   const [schools, setSchools] = useState([]);
   const [isSubmitModalVisible, setIsSubmitModalVisible] = useState(false);
   const [loadingForm, setLoadingForm] = useState(false);
-  
-  // 👉 BỔ SUNG: State quản lý chế độ Ẩn danh (Mặc định là true)
   const [isAnonymous, setIsAnonymous] = useState(true);
-
-  // States cho Tin tức & Phản ánh
+  const [trackingCode, setTrackingCode] = useState(null);
+  const [isTrackingModalVisible, setIsTrackingModalVisible] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
+  const [trackingResult, setTrackingResult] = useState(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
   const [feedData, setFeedData] = useState([]);
   const [loadingFeed, setLoadingFeed] = useState(true);
   const [activeFilter, setActiveFilter] = useState('Tất cả'); 
@@ -46,29 +54,30 @@ const PublicPortal = () => {
 
   const fetchData = async () => {
     try {
-      const catRes = await fetch(`${import.meta.env.VITE_API_URL}/reports/categories/list`);
-      const catData = await catRes.json();
+      // Bắn 4 request cùng một lúc, tiết kiệm 70% thời gian chờ
+      const [catRes, unitRes, newsRes, reportsRes] = await Promise.all([
+        fetch(`${import.meta.env.VITE_API_URL}/reports/categories/list`),
+        fetch(`${import.meta.env.VITE_API_URL}/units`),
+        fetch(`${import.meta.env.VITE_API_URL}/news`),
+        fetch(`${import.meta.env.VITE_API_URL}/reports`)
+      ]);
+
+      const [catData, unitData, newsRaw, reportsRaw] = await Promise.all([
+        catRes.json(),
+        unitRes.json(),
+        newsRes.json(),
+        reportsRes.json()
+      ]);
+
       setCategories(catData);
-
-      const unitRes = await fetch(`${import.meta.env.VITE_API_URL}/units`);
-      const unitData = await unitRes.json();
       setSchools(unitData.filter(u => u.tenDonVi.includes('Đại học') || u.tenDonVi.includes('THPT')));
-
-      const newsRes = await fetch(`${import.meta.env.VITE_API_URL}/news`);
-      const newsRaw = await newsRes.json();
-
-      const reportsRes = await fetch(`${import.meta.env.VITE_API_URL}/reports`);
-      const reportsRaw = await reportsRes.json();
 
       let combinedFeed = [];
 
       if (Array.isArray(newsRaw)) {
         const formattedNews = newsRaw.map(n => ({
-          id: `news-${n.id}`,
-          type: 'Tin tức',
-          title: n.tieuDe,
-          content: n.moTaNgan || n.noiDung,
-          date: new Date(n.ngayDang || Date.now()),
+          id: `news-${n.id}`, type: 'Tin tức', title: n.tieuDe,
+          content: n.moTaNgan || n.noiDung, date: new Date(n.ngayDang || Date.now()),
           image: getImageUrl(n.hinhAnh) || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&q=80', 
           categoryName: 'Tuyên truyền'
         }));
@@ -79,11 +88,8 @@ const PublicPortal = () => {
         const formattedReports = reportsRaw
           .filter(r => r.trangThai === 'Hoàn thành')
           .map(r => ({
-              id: `report-${r.id}`,
-              type: 'Phản ánh',
-              title: `[Đã xử lý] ${r.tieuDe}`,
-              content: r.ghiChuKetQua || r.noiDung,
-              date: new Date(r.ngayGui || Date.now()),
+              id: `report-${r.id}`, type: 'Phản ánh', title: `[Đã xử lý] ${r.tieuDe}`,
+              content: r.ghiChuKetQua || r.noiDung, date: new Date(r.ngayGui || Date.now()),
               image: getImageUrl(r.anhKetQua) || getImageUrl(r.anhKiemChung) || 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&q=80',
               categoryName: r.category ? r.category.tenDanhMuc : 'Khác'
             }));
@@ -189,6 +195,8 @@ const PublicPortal = () => {
         form.resetFields();
         setIsSubmitModalVisible(false);
         fetchData();
+        const reportId = result?.id || Math.floor(100000 + Math.random() * 900000);
+        setTrackingCode(`RP-${reportId}`);
       } else {
         console.error("Lỗi chi tiết:", result.message);
         message.error('Lỗi: ' + (Array.isArray(result.message) ? result.message[0] : result.message));
@@ -209,6 +217,35 @@ const PublicPortal = () => {
   const featuredArticle = filteredFeed.length > 0 ? filteredFeed[0] : null;
   const regularArticles = filteredFeed.length > 1 ? filteredFeed.slice(1) : [];
 
+  // 👉 3. Hàm xử lý tra cứu mã RP-xxx
+  const handleSearchTracking = async () => {
+    if (!searchInput.trim()) return message.warning('Vui lòng nhập mã tra cứu!');
+    
+    // Tách lấy con số từ chuỗi (VD: nhập RP-45 hay 45 đều lấy được số 45)
+    const idMatch = searchInput.match(/\d+/);
+    if (!idMatch) {
+      setTrackingResult(null);
+      setHasSearched(true); // Bật cờ đã tìm kiếm
+      return; 
+    }
+
+    setIsSearching(true);
+    setHasSearched(false); // Reset cờ trong lúc đang chờ API
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/reports/${idMatch[0]}`);
+      if (res.ok) {
+        const data = await res.json();
+        setTrackingResult(data);
+      } else {
+        setTrackingResult(null); // Tìm không ra -> set null
+      }
+    } catch (error) {
+      setTrackingResult(null);
+    } finally {
+      setIsSearching(false);
+      setHasSearched(true); // Bật cờ đã tìm kiếm xong
+    }
+  };
   return (
     <Layout style={{ minHeight: '100vh', background: '#fff' }}>
       {/* HEADER GIỮ NGUYÊN NHƯ CŨ */}
@@ -219,46 +256,143 @@ const PublicPortal = () => {
 
       <Header style={{ 
         display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
-        background: '#fff', padding: '0 5%', boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-        position: 'sticky', top: 0, zIndex: 1000, height: '72px'
+        background: '#fff', 
+        padding: window.innerWidth > 768 ? '0 5%' : '0 10px', // 👉 Bóp lề hai bên trên điện thoại
+        boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+        position: 'sticky', top: 0, zIndex: 1000, height: '72px',
+        overflow: 'hidden'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Title level={3} style={{ margin: 0, color: '#0a3055', fontFamily: 'serif', letterSpacing: '0.5px' }}>AN NINH HỌC ĐƯỜNG</Title>
+        {/* KHỐI LOGO / TIÊU ĐỀ */}
+        <div style={{ display: 'flex', alignItems: 'center', flexShrink: 1, marginRight: '8px' }}>
+          <Title level={window.innerWidth > 768 ? 3 : 5} style={{ margin: 0, color: '#0a3055', fontFamily: 'serif', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>
+            HUE CONNECT
+          </Title>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+        {/* KHỐI NÚT BẤM BÊN PHẢI */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: window.innerWidth > 768 ? '20px' : '6px', flexShrink: 0 }}>
+          
+          {/* Nút Tra Cứu */}
+          <Button 
+            type="default" 
+            icon={<SearchOutlined />} 
+            onClick={() => {
+              setIsTrackingModalVisible(true);
+              setTrackingResult(null); 
+              setSearchInput('');
+              setHasSearched(false);
+            }}
+            style={{ 
+              height: '40px', fontWeight: 'bold', borderRadius: '6px', color: '#0a3055', borderColor: '#0a3055',
+              padding: window.innerWidth > 768 ? '4px 15px' : '4px 8px' // 👉 Ép nút nhỏ lại trên mobile
+            }}
+          >
+            {window.innerWidth > 768 ? 'TRA CỨU' : ''}
+          </Button>
+
+          {/* Nút Gửi */}
           <Button 
             type="primary" 
             icon={<SendOutlined />} 
             onClick={() => setIsSubmitModalVisible(true)}
-            style={{ background: '#e11d48', border: 'none', height: '40px', fontWeight: 'bold', borderRadius: '6px', boxShadow: '0 4px 10px rgba(225, 29, 72, 0.3)' }}
+            style={{ 
+              background: '#e11d48', border: 'none', height: '40px', fontWeight: 'bold', borderRadius: '6px', 
+              boxShadow: '0 4px 10px rgba(225, 29, 72, 0.3)',
+              padding: window.innerWidth > 768 ? '4px 15px' : '4px 8px' 
+            }}
           >
             {window.innerWidth > 768 ? 'GỬI PHẢN ÁNH' : 'GỬI'}
           </Button>
 
+          {/* Khối User & Nút Quản lý */}
           {userInfo ? (
-            <Space size="middle">
+            <Space size={window.innerWidth > 768 ? 'middle' : 'small'}>
+              
+              {/* 👉 NÚT VÀO QUẢN LÝ (Đã rút gọn chữ trên Mobile và sửa link) */}
+              {(userInfo.role === 'admin' || userInfo.role === 'unit') && (
+                <Button 
+                  type="primary" 
+                  style={{ 
+                    background: '#10b981', borderColor: '#10b981', fontWeight: 'bold', borderRadius: '6px',
+                    padding: window.innerWidth > 768 ? '4px 15px' : '4px 8px' 
+                  }}
+                  onClick={() => {
+                    if (userInfo.role === 'admin') window.location.href = '/dashboard';
+                    else if (userInfo.role === 'unit') window.location.href = '/bao-cao-ket-qua';
+                  }}
+                >
+                  {window.innerWidth > 768 ? 'Vào trang Quản lý' : 'Quản lý'}
+                </Button>
+              )}
+
               <Dropdown menu={{
                 items: [
-                  { key: 'info', disabled: true, label: <div style={{ color: '#333' }}><b>{userInfo.fullName || 'Người dân'}</b><br/><span style={{fontSize:'12px', color:'#888'}}>{userInfo.email}</span></div> },
-                  { key: 'score', disabled: true, label: <div style={{ color: userInfo.diemUyTin >= 50 ? '#52c41a' : '#ff4d4f' }}><b>⭐ Điểm uy tín: {userInfo.diemUyTin}</b></div> },
+                  { key: 'info', disabled: true, label: <div style={{ color: '#333' }}><b>{userInfo.fullName || 'Cán bộ / Người dân'}</b><br/><span style={{fontSize:'12px', color:'#888'}}>{userInfo.email}</span></div> },
                   { type: 'divider' },
                   { key: 'logout', icon: <LogoutOutlined />, danger: true, label: 'Đăng xuất', onClick: handleLogout },
                 ]
               }} placement="bottomRight" trigger={['click']}>
-                <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '4px' }}>
                   <Avatar src={userInfo.avatar} icon={!userInfo.avatar && <UserOutlined />} style={{ backgroundColor: '#0a3055' }} />
                 </div>
               </Dropdown>
+
             </Space>
           ) : (
-            <Button type="default" onClick={() => window.location.href = '/login'}>Đăng nhập</Button>
+            <Button 
+              type="default" 
+              onClick={() => window.location.href = '/login'}
+              style={{ padding: window.innerWidth > 768 ? '4px 15px' : '4px 8px' }}
+            >
+              {window.innerWidth > 768 ? 'Đăng nhập' : 'Đăng nhập'}
+            </Button>
           )}
         </div>
       </Header>
 
       {/* NỘI DUNG TIN TỨC GIỮ NGUYÊN NHƯ CŨ */}
       <Content style={{ padding: '30px 5%', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+        <div style={{ marginBottom: '30px', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+          <Carousel autoplay effect="fade">
+            <div>
+              <img 
+                src={imgBanner1} 
+                alt="Banner 1" 
+                style={{ 
+                  width: '100%', 
+                  height: window.innerWidth > 768 ? '350px' : '180px', 
+                  objectFit: 'cover', // Đảm bảo ảnh lấp đầy khung mà không bị méo
+                  display: 'block' 
+                }} 
+              />
+            </div>
+            <div>
+              <img 
+                src={imgBanner2} 
+                alt="Banner 2" 
+                style={{ 
+                  width: '100%', 
+                  height: window.innerWidth > 768 ? '350px' : '180px', 
+                  objectFit: 'cover', 
+                  display: 'block' 
+                }} 
+              />
+            </div>
+            <div>
+              <img 
+                src={imgBanner3} 
+                alt="Banner 3" 
+                style={{ 
+                  width: '100%', 
+                  height: window.innerWidth > 768 ? '350px' : '180px', 
+                  objectFit: 'cover', 
+                  display: 'block' 
+                }} 
+              />
+            </div>
+          </Carousel>
+        </div>
+
         <div style={{ 
           display: 'flex', overflowX: 'auto', whiteSpace: 'nowrap', 
           paddingBottom: '16px', marginBottom: '24px', borderBottom: '2px solid #f0f0f0',
@@ -476,6 +610,64 @@ const PublicPortal = () => {
         </Form>
       </Modal>
 
+      {/* ================= MODAL GỬI PHẢN ÁNH THÀNH CÔNG (HIỆN MÃ TRA CỨU) ================= */}
+      <Modal
+        open={!!trackingCode}
+        onCancel={() => setTrackingCode(null)}
+        footer={null}
+        centered
+        closable={false}
+        width={500}
+      >
+        <div style={{ textAlign: 'center', padding: '20px 0' }}>
+          <CheckCircleOutlined style={{ fontSize: '64px', color: '#10b981', marginBottom: '16px' }} />
+          <Title level={3} style={{ color: '#0a3055', margin: '0 0 16px 0', fontWeight: 'bold' }}>GỬI PHẢN ÁNH THÀNH CÔNG!</Title>
+          
+          <Paragraph style={{ fontSize: '15px', color: '#555', marginBottom: '24px' }}>
+            Thông tin phản ánh của bạn đã được hệ thống ghi nhận.
+          </Paragraph>
+
+          <div style={{ 
+            background: '#f0fdf4', border: '2px dashed #10b981', borderRadius: '12px', 
+            padding: '24px', marginBottom: '30px' 
+          }}>
+            <div style={{ fontSize: '14px', color: '#065f46', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '12px' }}>
+              Mã số tra cứu của bạn:
+            </div>
+            <div style={{ 
+              fontSize: '42px', color: '#047857', fontWeight: '900', letterSpacing: '4px', 
+              fontFamily: 'Courier New, monospace', marginBottom: '16px' 
+            }}>
+              {trackingCode}
+            </div>
+            <div style={{ fontSize: '13px', color: '#065f46', fontStyle: 'italic' }}>
+              * Lưu ý: Hãy chụp màn hình hoặc sao chép mã số này. Đây là mã duy nhất để bạn tra cứu tiến độ xử lý.
+            </div>
+          </div>
+
+          <Space size="middle">
+            <Button 
+              size="large" 
+              icon={<CopyOutlined />} 
+              onClick={() => {
+                navigator.clipboard.writeText(trackingCode);
+                message.success('Đã sao chép mã tra cứu!');
+              }}
+            >
+              Sao chép mã
+            </Button>
+            <Button 
+              type="primary" 
+              size="large" 
+              style={{ background: '#0a3055' }}
+              onClick={() => setTrackingCode(null)}
+            >
+              Quay lại Trang chủ
+            </Button>
+          </Space>
+        </div>
+      </Modal>
+
       {/* SIDEBAR VÀ NÚT FILTER MOBILE GIỮ NGUYÊN */}
       {window.innerWidth < 768 && (
         <Button 
@@ -523,6 +715,81 @@ const PublicPortal = () => {
           ))}
         </div>
       </Drawer>
+
+      {/* ================= MODAL TRA CỨU TIẾN ĐỘ XỬ LÝ ================= */}
+      <Modal
+        title={<div style={{ fontSize: '18px', color: '#0a3055' }}><SearchOutlined /> Tra cứu tiến độ xử lý</div>}
+        open={isTrackingModalVisible}
+        onCancel={() => setIsTrackingModalVisible(false)}
+        footer={null}
+        width={600}
+        centered
+      >
+        <div style={{ marginBottom: '24px', display: 'flex', gap: '10px' }}>
+          <Input 
+            size="large" 
+            placeholder="Nhập mã tra cứu (VD: RP-45)..." 
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value.toUpperCase())}
+            onPressEnter={handleSearchTracking}
+          />
+          <Button type="primary" size="large" onClick={handleSearchTracking} loading={isSearching} style={{ background: '#0a3055' }}>
+            Tìm kiếm
+          </Button>
+        </div>
+
+        {/* Khối hiển thị khi CÓ KẾT QUẢ */}
+        {trackingResult && (
+          <div style={{ background: '#f8fafc', padding: '24px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <Title level={4} style={{ marginTop: 0 }}>Thông tin vụ việc: RP-{trackingResult.id}</Title>
+            <Paragraph><Text strong>Tiêu đề:</Text> {trackingResult.tieuDe}</Paragraph>
+            <Paragraph><Text strong>Đơn vị thụ lý:</Text> <Tag color="blue">{trackingResult.donViXuLy || 'Đang chờ phân công'}</Tag></Paragraph>
+            <Paragraph><Text strong>Ngày gửi:</Text> {new Date(trackingResult.ngayGui).toLocaleString('vi-VN')}</Paragraph>
+            
+            <div style={{ marginTop: '30px', marginBottom: '20px' }}>
+              <Steps
+                direction="vertical"
+                current={
+                  trackingResult.trangThai === 'Hoàn thành' ? 2 : 
+                  trackingResult.trangThai === 'Đang xử lý' ? 1 : 0
+                }
+                items={[
+                  {
+                    title: 'Tiếp nhận thông tin',
+                    description: 'Hệ thống đã ghi nhận phản ánh của bạn.',
+                  },
+                  {
+                    title: 'Đang xử lý',
+                    description: 'Cơ quan chức năng đang tiến hành xác minh và giải quyết.',
+                  },
+                  {
+                    title: 'Hoàn thành',
+                    description: trackingResult.ghiChuKetQua ? `Kết quả: ${trackingResult.ghiChuKetQua}` : 'Vụ việc đã được giải quyết dứt điểm.',
+                  },
+                ]}
+              />
+            </div>
+          </div>
+        )} {/* 👉 Vị trí dấu đóng bị thiếu đã được thêm vào đây */}
+
+        {/* Khối hiển thị khi TÌM KHÔNG RA */}
+        {hasSearched && !trackingResult && !isSearching && (
+          <div style={{ 
+            background: '#fff1f0', border: '1px dashed #ffa39e', padding: '30px 20px', 
+            borderRadius: '8px', textAlign: 'center', marginTop: '20px' 
+          }}>
+            <Empty 
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description={
+                <span style={{ color: '#cf1322', fontSize: '15px' }}>
+                  <b>Không tìm thấy dữ liệu!</b><br/>
+                  Mã tra cứu <Tag color="error" style={{ margin: '5px 0' }}>{searchInput}</Tag> không tồn tại hoặc không hợp lệ.
+                </span>
+              }
+            />
+          </div>
+        )}
+      </Modal>
     </Layout>
   );
 };

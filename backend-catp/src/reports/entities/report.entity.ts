@@ -13,7 +13,7 @@ export class Report {
   @Column()
   tieuDe: string;
 
-  @Column({ type: 'text', nullable: true })
+ @Column({ type: 'nvarchar', length: 'max', nullable: true })
   noiDung: string;
 
   @Column({ type: 'float', nullable: true })

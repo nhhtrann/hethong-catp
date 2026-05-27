@@ -1,9 +1,7 @@
-// src/pages/ResultReport.jsx
 import React, { useState, useEffect } from 'react';
 import { Table, Tag, Card, Typography, Input, Space, Button, Select } from 'antd';
 import { SearchOutlined, DownloadOutlined, EditOutlined, EyeOutlined } from '@ant-design/icons';
 
-// IMPORT COMPONENT MODAL DÙNG CHUNG
 import ReportDetail from '../pages/ReportDetail'; 
 
 const { Title } = Typography;
@@ -21,7 +19,6 @@ const ResultReport = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
 
-  // 👉 BỔ SUNG: Biến theo dõi màn hình điện thoại để xử lý phân trang và ghim cột
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
@@ -31,11 +28,9 @@ const ResultReport = () => {
   }, []);
 
   useEffect(() => {
-    // 👉 1. Lấy thông tin tài khoản đang đăng nhập từ localStorage
     const userInfo = JSON.parse(localStorage.getItem('catp_user')) || {};
     const { role = '', phuongXaId = '' } = userInfo;
 
-    // 👉 2. Kẹp thêm role và phuongXaId vào đuôi của link API
     fetch(`${import.meta.env.VITE_API_URL}/reports?role=${role}&phuongXaId=${phuongXaId}`)
       .then(res => res.json())
       .then(result => {
@@ -60,7 +55,6 @@ const ResultReport = () => {
       })
       .catch(error => console.error('Lỗi API Reports:', error));
 
-    // API lấy danh sách Units giữ nguyên
     fetch(`${import.meta.env.VITE_API_URL}/units`)
       .then(res => res.json())
       .then(result => Array.isArray(result) && setUnits(result))
@@ -73,7 +67,7 @@ const ResultReport = () => {
     const matchMang = filterMang === 'Tất cả' || item.mang === filterMang;
     const matchTrangThai = filterTrangThai === 'Tất cả' || item.trangThai === filterTrangThai;
     const matchDonVi = filterDonVi === 'Tất cả' || item.donViXuLy === filterDonVi;
-return matchSearch && matchMang && matchTrangThai && matchDonVi;
+    return matchSearch && matchMang && matchTrangThai && matchDonVi;
   });
 
   const handleExport = () => {
@@ -88,7 +82,6 @@ return matchSearch && matchMang && matchTrangThai && matchDonVi;
     link.click();
   };
 
-  // 👉 ĐÃ SỬA: Căn giữa tất cả các cột, bóp nhỏ cột hành động
   const columns = [
     { title: 'STT', dataIndex: 'stt', key: 'stt', width: 60, align: 'center' },
     { title: 'Tiêu đề vụ việc', dataIndex: 'tieuDe', key: 'tieuDe', width: 250, ellipsis: true, align: 'center' },
@@ -108,10 +101,23 @@ return matchSearch && matchMang && matchTrangThai && matchDonVi;
     {
       title: 'Hành động',
       key: 'action',
-      fixed: 'right', // Hủy ghim trên điện thoại
-      width: 80, // Thu nhỏ độ rộng
+      fixed: isMobile ? false : 'right', 
+      width: 80, 
       align: 'center',
       render: (_, record) => {
+        const handleViewDetail = async () => {
+          try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/reports/${record.id}`);
+            if (res.ok) {
+              const fullReportData = await res.json();
+              setSelectedRecord(fullReportData);
+              setIsModalVisible(true);
+            }
+          } catch (error) {
+            console.error("Lỗi khi tải chi tiết vụ việc:", error);
+          }
+        };
+
         const isDone = record.trangThai === 'Hoàn thành';
         const IconComponent = isDone ? EyeOutlined : EditOutlined;
         const iconColor = isDone ? '#8c8c8c' : '#1890ff'; 
@@ -119,12 +125,9 @@ return matchSearch && matchMang && matchTrangThai && matchDonVi;
         return (
           <Button 
             type="text" 
-            size="small" // Nút bé gọn lại
+            size="small" 
             icon={<IconComponent style={{ color: iconColor, fontSize: '18px' }} />} 
-            onClick={() => {
-              setSelectedRecord(record);
-              setIsModalVisible(true);
-            }}
+            onClick={handleViewDetail}
             title={isDone ? 'Xem lại' : 'Báo cáo kết quả'}
           />
         );
@@ -133,18 +136,16 @@ return matchSearch && matchMang && matchTrangThai && matchDonVi;
   ];
 
   return (
-    // 👉 ĐÃ SỬA: Padding bóp lại trên điện thoại để không bị chật
     <div style={{ padding: 'clamp(10px, 2vw, 24px)', overflowX: 'hidden' }}>
       
-      {/* Căn giữa tiêu đề trang trên mọi thiết bị */}
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '24px' }}>
         <Title level={2} style={{ margin: 0, fontSize: 'clamp(20px, 4vw, 28px)', textAlign: 'center' }}>
           Nhiệm vụ & Báo cáo kết quả
         </Title>
       </div>
-<Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+
+      <Card bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
         
-        {/* 👉 ĐÃ SỬA: Toolbar tự động rớt dòng trên điện thoại */}
         <div style={{ 
           display: 'flex', 
           flexDirection: isMobile ? 'column' : 'row', 
@@ -161,7 +162,11 @@ return matchSearch && matchMang && matchTrangThai && matchDonVi;
               onChange={(e) => setSearchText(e.target.value)}
             />
             
-            <Select defaultValue="Tất cả" style={{ width: '100%', minWidth: '130px', maxWidth: '160px' }} onChange={setFilterMang}>
+            <Select 
+              defaultValue="Tất cả" 
+              style={{ minWidth: '150px' }} 
+              onChange={setFilterMang}
+            >
               <Option value="Tất cả">Tất cả mảng</Option>
               <Option value="Giao thông">Giao thông</Option>
               <Option value="Bạo lực">Bạo lực</Option>
@@ -169,7 +174,11 @@ return matchSearch && matchMang && matchTrangThai && matchDonVi;
               <Option value="An ninh Trật tự">An ninh Trật tự</Option>
             </Select>
 
-            <Select defaultValue="Tất cả" style={{ width: '100%', minWidth: '150px', maxWidth: '180px' }} onChange={setFilterTrangThai}>
+            <Select 
+              defaultValue="Tất cả" 
+              style={{ minWidth: '160px' }} 
+              onChange={setFilterTrangThai}
+            >
               <Option value="Tất cả">Tất cả trạng thái</Option>
               <Option value="Mới">Mới</Option>
               <Option value="Đang xử lý">Đang xử lý</Option>
@@ -177,7 +186,13 @@ return matchSearch && matchMang && matchTrangThai && matchDonVi;
               <Option value="Hoàn thành">Hoàn thành</Option>
             </Select>
 
-            <Select defaultValue="Tất cả" style={{ width: '100%', minWidth: '160px', maxWidth: '220px' }} onChange={setFilterDonVi}>
+            {/* 👉 YÊU CẦU 3: Thêm popupMatchSelectWidth={false} để danh sách tự giãn ra không bị cắt chữ */}
+            <Select 
+              popupMatchSelectWidth={false}
+              defaultValue="Tất cả" 
+              style={{ minWidth: '200px' }} 
+              onChange={setFilterDonVi}
+            >
               <Option value="Tất cả">Tất cả đơn vị</Option>
               {units.map(u => (
                 <Option key={u.id} value={u.tenDonVi}>{u.tenDonVi}</Option>
@@ -186,7 +201,6 @@ return matchSearch && matchMang && matchTrangThai && matchDonVi;
             </Select>
           </Space>
 
-          {/* Nút Xuất file tràn full chiều ngang nếu là ĐT */}
           <Button 
             type="default" 
             icon={<DownloadOutlined />} 
@@ -196,8 +210,6 @@ return matchSearch && matchMang && matchTrangThai && matchDonVi;
             Xuất dữ liệu
           </Button>
         </div>
-
-        {/* 👉 ĐÃ SỬA: Đã XÓA rowSelection (gây lỗi) & Cập nhật phân trang chuẩn */}
         <Table 
           columns={columns} 
           dataSource={filteredData} 
@@ -211,7 +223,8 @@ return matchSearch && matchMang && matchTrangThai && matchDonVi;
           }}
         />
       </Card>
-<ReportDetail 
+
+      <ReportDetail 
         visible={isModalVisible} 
         onClose={() => setIsModalVisible(false)} 
         data={selectedRecord} 

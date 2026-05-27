@@ -8,7 +8,7 @@ const { Option } = Select;
 const { TextArea } = Input;
 const { Dragger } = Upload;
 
-const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
+const ReportDetail = ({ visible, onClose, data, onRefresh, mode = 'admin' }) => {
   const [form] = Form.useForm();
   const [units, setUnits] = useState([]);
   const [fileList, setFileList] = useState([]);
@@ -171,8 +171,10 @@ const ReportDetail = ({ visible, onClose, data, mode = 'admin' }) => {
 
       if (response.ok) {
         message.success('Cập nhật thành công!');
+        if (onRefresh) {
+          onRefresh(); // Gọi hàm load lại bảng ở file cha
+        }
         onClose();
-        setTimeout(() => window.location.reload(), 500);
       } else {
         message.error('Backend từ chối dữ liệu! Hãy kiểm tra F12.'); 
       }

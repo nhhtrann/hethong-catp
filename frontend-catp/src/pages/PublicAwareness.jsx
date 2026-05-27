@@ -103,8 +103,10 @@ const PublicAwareness = () => {
     }
 
     setFilteredData(result);
-    setCurrentPage(1); 
   }, [searchText, filterTacGia, tuNgay, denNgay, data]);
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchText, filterTacGia, tuNgay, denNgay]);
 
   const authors = ['Tất cả', ...new Set(data.map(item => item.tacGia).filter(Boolean))];
 

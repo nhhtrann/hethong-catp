@@ -125,9 +125,10 @@ const ReportDispatch = () => {
     }
 
     setFilteredData(result);
-    // 👉 BỔ SUNG: Reset về trang 1 khi lọc
-    setCurrentPage(1);
   }, [searchText, filterMang, filterTrangThai, filterDonVi, data]);
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchText, filterMang, filterTrangThai, filterDonVi]);
 
   const handleBeforeUpload = async (file) => {
     const isLt5M = file.size / 1024 / 1024 < 5;
@@ -498,6 +499,7 @@ const ReportDispatch = () => {
         onClose={() => setIsModalVisible(false)} 
         data={selectedRecord} 
         mode="admin" 
+        onRefresh={fetchData}
       />
 
       <Modal
