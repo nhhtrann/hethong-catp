@@ -6,7 +6,7 @@ export class Unit {
   @PrimaryGeneratedColumn({ name: 'unitId' })
   id: number;
 
-  @Column({ length: 255 })
+  @Column({ type: 'nvarchar', length: 'max', nullable: true })
   tenDonVi: string;
 
   @Column({ length: 100, nullable: true })

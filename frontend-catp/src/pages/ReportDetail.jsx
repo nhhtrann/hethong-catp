@@ -1,18 +1,25 @@
 // src/components/ReportDetail.jsx
 import React, { useState, useEffect } from 'react';
-import { InboxOutlined, EnvironmentOutlined } from '@ant-design/icons';
-import { Modal, Row, Col, Typography, Form, Select, Input, Upload, Button, message, Image, Alert } from 'antd';
+import { Modal, Row, Col, Typography, Form, Select, Input, Upload, Button, message, Image, Alert, Steps, Collapse, Tag, Avatar, Space } from 'antd';
+import { 
+  InboxOutlined, EnvironmentOutlined, ClockCircleOutlined, 
+  CheckCircleOutlined, SyncOutlined, TeamOutlined, UserOutlined, 
+  FileImageOutlined, SolutionOutlined, EditOutlined, DownloadOutlined
+} from '@ant-design/icons';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
 const { Dragger } = Upload;
+const { Step } = Steps;
+const { Panel } = Collapse;
 
 const ReportDetail = ({ visible, onClose, data, onRefresh, mode = 'admin' }) => {
   const [form] = Form.useForm();
   const [units, setUnits] = useState([]);
   const [fileList, setFileList] = useState([]);
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   const isCompleted = data?.trangThai === 'Hoàn thành'; 
   const isPending = data?.trangThai === 'Chờ duyệt'; 
@@ -22,61 +29,52 @@ const ReportDetail = ({ visible, onClose, data, onRefresh, mode = 'admin' }) => 
   const disableStatus = mode === 'unit' || isCompleted; 
   const hideSaveBtn = (mode === 'unit' && (isCompleted || isPending)) || (mode === 'admin' && isCompleted);
 
-  // 👉 BỔ SUNG: Hàm xử lý link ảnh thông minh (Chặn lỗi 431 Base64)
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    fetch(`${import.meta.env.VITE_API_URL}/units`)
+      .then(res => res.json())
+      .then(result => Array.isArray(result) && setUnits(result))
+      .catch(err => console.error("Lỗi load đơn vị:", err));
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const getImageUrl = (imgStr) => {
-    if (!imgStr) return '';
-    // Nếu là Base64, link web ngoài, hoặc blob thì tha cho nó
+    if (!imgStr || imgStr === "[]" || imgStr === "null") return null;
     if (String(imgStr).startsWith('http') || String(imgStr).startsWith('data:image') || String(imgStr).startsWith('blob:')) {
       return imgStr;
     }
-    // Nếu không thì nối với API Host
     const baseUrl = import.meta.env.VITE_API_URL.replace(/\/$/, '');
     const imagePath = String(imgStr).startsWith('/') ? imgStr : `/${imgStr}`;
     return `${baseUrl}${imagePath}`;
   };
 
-  useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL}/units`)
-      .then(res => res.json())
-      .then(result => Array.isArray(result) && setUnits(result))
-      .catch(err => console.error("Lỗi load đơn vị:", err));
-  }, []);
+  const getImagesFromArray = (imgData) => {
+    if (!imgData || imgData === "[]" || imgData === "null") return [];
+    try {
+      const parsed = typeof imgData === 'string' ? JSON.parse(imgData) : imgData;
+      return Array.isArray(parsed) ? parsed.filter(i => i) : [imgData];
+    } catch (e) {
+      return [imgData];
+    }
+  };
+
+  const anhKiemChungList = getImagesFromArray(data?.anhKiemChung);
+  const anhKetQuaData = getImagesFromArray(data?.anhKetQua);
 
   useEffect(() => {
     if (visible && data) {
-      let initialFiles = [];
-      if (data.anhKetQua && data.anhKetQua !== 'null' && data.anhKetQua !== '[]') {
-        try {
-          const parsed = typeof data.anhKetQua === 'string' ? JSON.parse(data.anhKetQua) : data.anhKetQua;
-          if (Array.isArray(parsed)) {
-            initialFiles = parsed
-              .filter(fileName => fileName && fileName !== 'null')
-              .map((fileName, index) => ({
-                uid: `-${index}`,
-                name: fileName,
-                status: 'done',
-                // 👉 ĐÃ SỬA: Dùng hàm getImageUrl để load ảnh đã xử lý
-                url: getImageUrl(fileName) 
-              }));
-          }
-        } catch (error) {
-          if (data.anhKetQua !== 'null') {
-            initialFiles = [{
-              uid: '-1',
-              name: data.anhKetQua,
-              status: 'done',
-              // 👉 ĐÃ SỬA: Dùng hàm getImageUrl
-              url: getImageUrl(data.anhKetQua)
-            }];
-          }
-        }
-      }
+      const initialFiles = anhKetQuaData.map((fileName, index) => ({
+        uid: `-${index}`,
+        name: fileName,
+        status: 'done',
+        url: getImageUrl(fileName) 
+      }));
       setFileList(initialFiles);
 
       form.setFieldsValue({
-        trangThai: mode === 'unit' && data.trangThai !== 'Hoàn thành' && data.trangThai !== 'Chờ duyệt' 
-                   ? 'Chờ duyệt' : data.trangThai,
-        ghiChu: data.ghiChu || data.ghiChuKetQua || "",
+        trangThai: mode === 'unit' && data.trangThai !== 'Hoàn thành' && data.trangThai !== 'Chờ duyệt' ? 'Chờ duyệt' : data.trangThai,
+        ghiChu: data.ghiChuKetQua || "",
         anhKetQua: initialFiles,
         donViXuLy: data.donViXuLy,
         kinhDo: data.kinhDo || "",
@@ -92,7 +90,6 @@ const ReportDetail = ({ visible, onClose, data, onRefresh, mode = 'admin' }) => 
         const uploadedName = file.response.fileName || file.response.filename;
         if (uploadedName) {
           file.name = uploadedName; 
-          // 👉 ĐÃ SỬA: Dùng hàm getImageUrl
           file.url = getImageUrl(uploadedName);
         }
       }
@@ -103,58 +100,40 @@ const ReportDetail = ({ visible, onClose, data, onRefresh, mode = 'admin' }) => 
   };
 
   const handleGetLocation = () => {
-    if (!navigator.geolocation) {
-      message.error('Trình duyệt hoặc thiết bị của bạn không hỗ trợ định vị GPS!');
-      return;
-    }
-    
+    if (!navigator.geolocation) { message.error('Thiết bị không hỗ trợ GPS!'); return; }
     setIsFetchingLocation(true);
-    message.loading({ content: 'Đang kết nối vệ tinh để lấy tọa độ...', key: 'gps' });
-
+    message.loading({ content: 'Đang kết nối GPS...', key: 'gps' });
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        form.setFieldsValue({
-          kinhDo: position.coords.longitude.toString(),
-          viDo: position.coords.latitude.toString()
-        });
+        form.setFieldsValue({ kinhDo: position.coords.longitude.toString(), viDo: position.coords.latitude.toString() });
         setIsFetchingLocation(false);
-        message.success({ content: 'Đã lấy được tọa độ hiện tại!', key: 'gps', duration: 2 });
+        message.success({ content: 'Đã lấy được tọa độ!', key: 'gps', duration: 2 });
       },
-      (error) => {
-        setIsFetchingLocation(false);
-        console.error("Lỗi GPS: ", error);
-        message.error({ content: 'Không thể lấy tọa độ. Vui lòng bật Dịch vụ Vị trí (Location)!', key: 'gps', duration: 4 });
-      },
+      (error) => { setIsFetchingLocation(false); message.error({ content: 'Lỗi GPS. Hãy bật Vị trí!', key: 'gps', duration: 4 }); },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
 
+  // 👉 BƯỚC SỬA LỖI NẰM Ở HÀM NÀY: Khôi phục logic an toàn cho Kinh độ/Vĩ độ và in lỗi chi tiết
   const handleLuuBaoCao = async (values) => {
     try {
-      const finalDonVi = disableUnit ? data.donViXuLy : values.donViXuLy;
-      const finalGhiChu = disableResult ? (data.ghiChu || data.ghiChuKetQua) : values.ghiChu;
-      
       let finalAnh = data.anhKetQua; 
       if (!disableResult) { 
         const currentFiles = values.anhKetQua || [];
-        const fileNamesOnly = currentFiles
-          .map(f => f.name)
-          .filter(name => name != null && name !== 'null'); 
-          
+        const fileNamesOnly = currentFiles.map(f => f.name).filter(name => name); 
         finalAnh = JSON.stringify(fileNamesOnly);
       }
 
-      const finalStatus = mode === 'unit' ? 'Chờ duyệt' : values.trangThai;
-
-      let finalKinhDo = disableResult ? data.kinhDo : (values.kinhDo || data.kinhDo);
-      let finalViDo = disableResult ? data.viDo : (values.viDo || data.viDo);
-
       const payloadData = {
-        trangThai: finalStatus,
-        donViXuLy: finalDonVi || "",
-        ghiChuKetQua: finalGhiChu || "",
+        trangThai: mode === 'unit' ? 'Chờ duyệt' : values.trangThai,
+        donViXuLy: disableUnit ? data.donViXuLy : values.donViXuLy || "",
+        ghiChuKetQua: disableResult ? (data.ghiChuKetQua) : values.ghiChu || "",
         anhKetQua: finalAnh,
       };
+
+      // Xử lý an toàn tọa độ để Backend không báo lỗi
+      let finalKinhDo = disableResult ? data.kinhDo : (values.kinhDo || data.kinhDo);
+      let finalViDo = disableResult ? data.viDo : (values.viDo || data.viDo);
 
       if (finalKinhDo !== "" && finalKinhDo !== null && finalKinhDo !== undefined) {
         payloadData.kinhDo = String(finalKinhDo);
@@ -169,149 +148,182 @@ const ReportDetail = ({ visible, onClose, data, onRefresh, mode = 'admin' }) => 
         body: JSON.stringify(payloadData)
       });
 
-      if (response.ok) {
-        message.success('Cập nhật thành công!');
-        if (onRefresh) {
-          onRefresh(); // Gọi hàm load lại bảng ở file cha
-        }
-        onClose();
-      } else {
-        message.error('Backend từ chối dữ liệu! Hãy kiểm tra F12.'); 
+      if (response.ok) { 
+        message.success('Cập nhật thành công!'); 
+        if (onRefresh) onRefresh(); 
+        onClose(); 
+      } else { 
+        // 👉 ĐÃ SỬA: Bắt Backend in ra lỗi cụ thể
+        const errorData = await response.json();
+        const errorMsg = Array.isArray(errorData.message) ? errorData.message.join(', ') : errorData.message;
+        message.error(`Từ chối cập nhật: ${errorMsg || 'Kiểm tra lại dữ liệu'}`); 
+        console.error("Chi tiết lỗi Backend:", errorData);
       }
-    } catch (error) {
-      message.error('Lỗi kết nối máy chủ!');
+    } catch (error) { 
+      message.error('Lỗi kết nối máy chủ!'); 
     }
   };
+
+  const getSteps = () => [
+    { title: 'Tiếp nhận', status: 'finish', icon: <CheckCircleOutlined /> },
+    { 
+      title: 'Đang xử lý', 
+      status: (isCompleted || isPending) ? 'finish' : 'process', 
+      icon: (isCompleted || isPending) ? <CheckCircleOutlined /> : <SyncOutlined spin /> 
+    },
+    { 
+      title: 'Hoàn thành', 
+      status: isCompleted ? 'finish' : 'wait', 
+      icon: isCompleted ? <CheckCircleOutlined /> : <ClockCircleOutlined /> 
+    },
+  ];
 
   if (!data) return null;
 
   return (
     <Modal
-      title={<Title level={4} style={{ margin: 0 }}>Chi tiết: {data.tieuDe || "N/A"}</Title>}
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: '20px' }}>
+          <Title level={4} style={{ margin: 0 }}>Vụ việc: {data.tieuDe || "N/A"}</Title>
+          <Tag color={isCompleted ? 'green' : isPending ? 'blue' : 'volcano'}>{data.trangThai?.toUpperCase()}</Tag>
+        </div>
+      }
       open={visible}
       onCancel={onClose}
-      width={1000}
+      width={isMobile ? '100%' : 900}
       footer={null}
       centered
+      styles={{ body: { padding: isMobile ? '10px' : '20px' }, mask: { zIndex: 1000 }, wrapper: { zIndex: 1001 } }}
     >
-      {isCompleted && <Alert message="Hồ sơ đã hoàn thành, không thể sửa đổi." type="error" showIcon style={{ marginBottom: 16 }} />}
-      {mode === 'unit' && isPending && !isCompleted && <Alert message="Bạn đã nộp báo cáo. Đang chờ Ban Tiếp Nhận CATP phê duyệt chốt sổ." type="info" showIcon style={{ marginBottom: 16 }} />}
-      {mode === 'admin' && isPending && !isCompleted && <Alert message="Cơ quan đã gửi kết quả. Bạn có thể chỉnh sửa lại Ghi chú & Ảnh trước khi chọn 'Hoàn thành' để chốt sổ." type="warning" showIcon style={{ marginBottom: 16 }} />}
+      {isCompleted && <Alert message="Hồ sơ đã hoàn thành và chốt số liệu, không thể sửa đổi." type="error" showIcon style={{ marginBottom: 16 }} />}
 
-      <Row gutter={24}>
-        <Col span={10} style={{ borderRight: '1px solid #f0f0f0', paddingRight: 16 }}>
-          <p><Text strong>Thời gian gửi:</Text> {data.ngayGui || "N/A"}</p>
-          <Text strong>Nội dung phản ánh:</Text>
-          <Paragraph style={{ background: '#f9f9f9', padding: '12px', borderRadius: '8px', marginTop: '8px' }}>
-            {data.noiDung || "Không có nội dung mô tả."}
-          </Paragraph>
+      <Form form={form} layout="vertical" onFinish={handleLuuBaoCao}>
+        <Collapse bordered={false} defaultActiveKey={['1', '2', '3']} expandIconPosition="end" style={{ background: 'transparent' }}>
           
-          <Text strong>Ảnh minh chứng từ người dân:</Text>
-          <div style={{ marginTop: 10 }}>
-             {(() => {
-               if (!data.anhKiemChung || data.anhKiemChung === "[]" || data.anhKiemChung === "null") {
-                 return (
-                   <div style={{ padding: '20px', background: '#f5f5f5', textAlign: 'center', borderRadius: '8px' }}>
-                      <Text type="secondary">Người dân không gửi ảnh kèm theo</Text>
-                   </div>
-                 );
-               }
+          {/* ================= GIAI ĐOẠN 1: TỔNG QUAN & TIẾP NHẬN ================= */}
+          <Panel 
+            header={<b>1. Thông tin ban đầu & Tiếp nhận</b>} 
+            key="1" 
+            extra={!isMobile && <Steps size="small" current={0} items={getSteps()} style={{ minWidth: '300px' }}/>}
+            style={{ marginBottom: 12, border: '1px solid #d9d9d9', borderRadius: '8px', background: '#fff', overflow: 'hidden' }}
+          >
+            <div style={{ padding: '0 10px' }}>
+              <p><Text type="secondary"><ClockCircleOutlined /> Thời gian gửi:</Text> <b>{data.ngayGui ? new Date(data.ngayGui).toLocaleString('vi-VN') : "N/A"}</b></p>
+              <Space align="start" style={{ marginBottom: 12 }}>
+                <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#ccc' }} />
+                <div>
+                  <Text strong>{data.nguoiGui?.fullName || data.sdtNguoiGui || "Người dân ẩn danh"}</Text>
+                  <p style={{ margin: 0, fontSize: '13px', color: '#666' }}>{data.sdtNguoiGui ? `SĐT: ${data.sdtNguoiGui}` : data.nguoiGui?.email || ""}</p>
+                </div>
+              </Space>
+              
+              <Paragraph style={{ background: '#f5f5f5', padding: '12px', borderRadius: '8px', marginTop: 10 }}>
+                <b style={{ color: '#555' }}>Nội dung phản ánh:</b><br/> {data.noiDung || "N/A"}
+              </Paragraph>
 
-               let imgArray = [];
-               try {
-                 imgArray = typeof data.anhKiemChung === 'string' ? JSON.parse(data.anhKiemChung) : data.anhKiemChung;
-                 if (!Array.isArray(imgArray)) imgArray = [data.anhKiemChung];
-               } catch (error) { 
-                 imgArray = [data.anhKiemChung]; 
-               }
+              {anhKiemChungList.length > 0 && (
+                <>
+                  <Text strong style={{ display: 'block', marginBottom: 8 }}><FileImageOutlined /> Ảnh minh chứng từ người dân:</Text>
+                  <Image.PreviewGroup>
+                    <Row gutter={[8, 8]}>
+                      {anhKiemChungList.map((tenFile, index) => (
+                        <Col key={index} xs={12} sm={8} md={6}>
+                          <Image 
+                            src={getImageUrl(tenFile)} 
+                            style={{ width: '100%', height: isMobile ? '80px' : '100px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #ddd' }}
+                            fallback="https://via.placeholder.com/150?text=Lỗi+ảnh" 
+                          />
+                        </Col>
+                      ))}
+                    </Row>
+                  </Image.PreviewGroup>
+                </>
+              )}
+            </div>
+          </Panel>
 
-               return imgArray.map((tenFile, index) => (
-                 <Image 
-                  key={index}
-                  width="100%" 
-                  // 👉 ĐÃ SỬA: Bọc hàm getImageUrl để diệt lỗi 431
-                  src={getImageUrl(tenFile)} 
-                  style={{ borderRadius: '8px', border: '1px solid #ddd', maxHeight: '300px', objectFit: 'contain', marginBottom: '8px' }}
-                  fallback="https://via.placeholder.com/200?text=Lỗi+ảnh" 
-                 />
-               ));
-             })()}
-          </div>
-        </Col>
+          {/* ================= GIAI ĐOẠN 2: PHÂN CÔNG & XỬ LÝ ================= */}
+          <Panel 
+            header={<b>2. Phân công & Xử lý</b>} 
+            key="2" 
+            style={{ marginBottom: 12, border: '1px solid #d9d9d9', borderRadius: '8px', background: '#fff', overflow: 'hidden' }}
+          >
+            <Row gutter={16}>
+              <Col xs={24} sm={12}>
+                <Form.Item name="donViXuLy" label={<Text strong><TeamOutlined /> Đơn vị được phân công</Text>}>
+                  <Select disabled={disableUnit} placeholder="-- Chọn Đơn vị --">
+                    {units.map(u => <Option key={u.id} value={u.tenDonVi}>{u.tenDonVi}</Option>)}
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={12}>
+                <Form.Item name="trangThai" label={<Text strong><ClockCircleOutlined /> Trạng thái xử lý</Text>}>
+                  <Select disabled={disableStatus}>
+                    <Option value="Mới">Mới</Option>
+                    <Option value="Đang xử lý">Đang xử lý</Option>
+                    <Option value="Chờ duyệt">Chờ duyệt</Option>
+                    <Option value="Hoàn thành">Hoàn thành</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
+            {mode === 'admin' && hideSaveBtn && (
+              <Alert message="Để cập nhật lại Ghi chú hoặc Ảnh, hãy chuyển Trạng thái về 'Đang xử lý'." type="info" size="small" showIcon style={{marginBottom: 10}}/>
+            )}
+          </Panel>
 
-        <Col span={14}>
-          <Form form={form} layout="vertical" onFinish={handleLuuBaoCao}>
-            <Form.Item name="trangThai" label="Trạng thái xử lý">
-              <Select disabled={disableStatus}>
-                <Option value="Mới">Mới</Option>
-                <Option value="Đang xử lý">Đang xử lý</Option>
-                <Option value="Chờ duyệt">Chờ duyệt</Option>
-                <Option value="Hoàn thành">Hoàn thành</Option>
-              </Select>
-            </Form.Item>
-
-            <Form.Item name="donViXuLy" label="Đơn vị được phân công">
-              <Select disabled={disableUnit}>
-                {units.map(u => <Option key={u.id} value={u.tenDonVi}>{u.tenDonVi}</Option>)}
-              </Select>
-            </Form.Item>
-
-            <Form.Item name="ghiChu" label="Ghi chú/Kết quả xử lý">
-              <TextArea rows={3} disabled={disableResult} placeholder="Nhập nội dung báo cáo kết quả..." />
+          {/* ================= GIAI ĐOẠN 3: KẾT QUẢ ================= */}
+          <Panel 
+            header={<b>3. Kết quả xử lý dứt điểm</b>} 
+            key="3" 
+            style={{ marginBottom: hideSaveBtn ? 0 : 12, border: '1px solid #d9d9d9', borderRadius: '8px', background: '#fff', overflow: 'hidden' }}
+          >
+            <Form.Item name="ghiChu" label={<Text strong><SolutionOutlined /> Ghi chú/Nội dung báo cáo kết quả</Text>}>
+              <TextArea rows={3} disabled={disableResult} placeholder="Nhập nội dung báo cáo chi tiết kết quả xử lý..." style={{ borderRadius: '6px' }}/>
             </Form.Item>
 
             <div style={{ padding: '12px', backgroundColor: '#f0f5ff', borderRadius: '8px', marginBottom: '16px', border: '1px solid #d6e4ff' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <Text strong style={{ color: '#005bac' }}>Vị trí xử lý thực tế:</Text>
+              <Row gutter={16} align="middle">
+                <Col xs={24} sm={10} style={{ marginBottom: isMobile ? 8 : 0 }}>
+                  <Text strong style={{ color: '#005bac' }}><EnvironmentOutlined /> Vị trí xử lý thực tế:</Text>
+                </Col>
                 {!disableResult && (
-                  <Button 
-                    type="primary" 
-                    size="small" 
-                    icon={<EnvironmentOutlined />} 
-                    onClick={handleGetLocation} 
-                    loading={isFetchingLocation}
-                    style={{ backgroundColor: '#1890ff' }}
-                  >
-                    Lấy vị trí hiện tại
-                  </Button>
+                  <Col xs={24} sm={14} style={{ textAlign: isMobile ? 'left' : 'right', marginBottom: isMobile ? 12 : 0 }}>
+                    <Button type="primary" size="small" icon={<EnvironmentOutlined />} onClick={handleGetLocation} loading={isFetchingLocation} style={{ backgroundColor: '#1890ff', borderRadius: '4px', width: isMobile ? '100%' : 'auto' }}>
+                      Lấy vị trí hiện tại
+                    </Button>
+                  </Col>
                 )}
-              </div>
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item name="kinhDo" label="Kinh độ" style={{ marginBottom: 0 }}>
-                    <Input placeholder="Ví dụ: 0.0" disabled={disableResult} />
+              </Row>
+              <Row gutter={16} style={{ marginTop: 8 }}>
+                <Col xs={12} sm={12}>
+                  <Form.Item name="kinhDo" label={<Text type="secondary" style={{ fontSize: 12 }}>Kinh độ</Text>} style={{ marginBottom: 0 }}>
+                    <Input placeholder="0.0" disabled={disableResult} style={{ borderRadius: '4px' }}/>
                   </Form.Item>
                 </Col>
-                <Col span={12}>
-                  <Form.Item name="viDo" label="Vĩ độ" style={{ marginBottom: 0 }}>
-                    <Input placeholder="Ví dụ: 0.0" disabled={disableResult} />
+                <Col xs={12} sm={12}>
+                  <Form.Item name="viDo" label={<Text type="secondary" style={{ fontSize: 12 }}>Vĩ độ</Text>} style={{ marginBottom: 0 }}>
+                    <Input placeholder="0.0" disabled={disableResult} style={{ borderRadius: '4px' }}/>
                   </Form.Item>
                 </Col>
               </Row>
             </div>
 
-            <Form.Item name="anhKetQua" label="Ảnh minh chứng kết quả">
-              <Dragger 
-                name="file" 
-                action={`${import.meta.env.VITE_API_URL}/upload`} 
-                multiple 
-                disabled={disableResult}
-                listType="picture"
-                fileList={fileList}
-                onChange={handleUploadChange}
-              >
+            <Form.Item name="anhKetQua" label={<Text strong><FileImageOutlined /> Ảnh minh chứng kết quả (Upload lại hoặc bổ sung)</Text>}>
+              <Dragger name="file" action={`${import.meta.env.VITE_API_URL}/upload`} multiple disabled={disableResult} listType="picture" fileList={fileList} onChange={handleUploadChange} style={{ background: '#fff', borderRadius: '8px' }}>
                 <p className="ant-upload-drag-icon"><InboxOutlined /></p>
-                <p className="ant-upload-text">{disableResult ? "Đã khóa tải ảnh" : "Kéo thả ảnh báo cáo vào đây"}</p>
+                <p className="ant-upload-text">{disableResult ? "Không thể tải ảnh khi đã chốt hồ sơ" : "Kéo thả ảnh báo cáo"}</p>
               </Dragger>
             </Form.Item>
+          </Panel>
+        </Collapse>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-              <Button onClick={onClose}>Đóng</Button>
-              {!hideSaveBtn && <Button type="primary" htmlType="submit" style={{ backgroundColor: '#10b981' }}>Lưu thông tin</Button>}
-            </div>
-          </Form>
-        </Col>
-      </Row>
+        {/* Nút thao tác dưới đáy nằm bên trong Form */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: 16, paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
+          <Button onClick={onClose} icon={<DownloadOutlined rotate={180}/>} >Đóng chi tiết</Button>
+          {!hideSaveBtn && <Button type="primary" htmlType="submit" icon={<EditOutlined/>} style={{ backgroundColor: '#10b981', border: 'none' }}>Lưu & Cập nhật</Button>}
+        </div>
+      </Form>
     </Modal>
   );
 };

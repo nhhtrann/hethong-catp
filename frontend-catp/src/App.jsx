@@ -2,10 +2,12 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import viVN from 'antd/locale/vi_VN';
-import { Button, Dropdown, Avatar, Modal, Form, Empty, Input, message, Upload, ConfigProvider } from 'antd'; 
-import { UserOutlined, LockOutlined, LogoutOutlined, IdcardOutlined, UploadOutlined } from '@ant-design/icons';
+import { Button, Dropdown, Avatar, Modal, Form, Empty, Input, 
+  message, Upload, ConfigProvider, Badge, Popover, List, Typography } from 'antd'; 
+import { UserOutlined, LockOutlined, LogoutOutlined, IdcardOutlined, 
+  UploadOutlined, BellOutlined } from '@ant-design/icons';
 import './App.css';
-
+import {io} from 'socket.io-client';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import ReportDispatch from './pages/ReportDispatch';
@@ -15,6 +17,7 @@ import PublicAwareness from './pages/PublicAwareness';
 import LoginPage from './pages/LoginPage';
 import ResultReport from './pages/ResultReport';
 import PublicPortal from './pages/PublicPortal';
+
 
 function App() {
   const [userRole, setUserRole] = useState(localStorage.getItem('userRole') || null);
@@ -47,6 +50,99 @@ function App() {
   
   const [previewAvatar, setPreviewAvatar] = useState(userInfo?.avatar || null);
 
+  const [notifications, setNotifications] = useState([]);
+
+  // 👉 HÀM GỌI API LẤY THÔNG BÁO TỪ BACKEND
+  const fetchNotifications = async () => {
+    if (!userInfo?.id) return;
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/notifications/user/${userInfo.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data);
+      }
+    } catch (error) {
+      console.error('Lỗi tải thông báo:', error);
+    }
+  };
+
+  // Tự động tải thông báo khi vừa vào web
+  useEffect(() => {
+    fetchNotifications();
+  }, [userInfo]);
+
+  useEffect(() => {
+    // Nếu chưa đăng nhập thì không mở kết nối
+    if (!userInfo?.id) return;
+    const socket = io('https://api.hethong-catp.io.vn', {
+      transports: ['polling', 'websocket'],
+      secure: true,
+      rejectUnauthorized: false
+    });
+    // 2. Báo danh với tổng đài (Tôi là userId này...)
+    socket.emit('register', userInfo.id);
+
+    // 3. Lắng nghe sự kiện "new_notification" từ Backend bắn sang
+    socket.on('new_notification', (newNotif) => {
+      console.log('🔔 Vừa nhận được thông báo:', newNotif); 
+      setNotifications(prevList => [newNotif, ...prevList]);
+      message.info(`Thông báo mới: ${newNotif.title}`);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [userInfo]);
+
+  // 👉 HÀM CLICK ĐỂ ĐÁNH DẤU ĐÃ ĐỌC
+  const handleReadNotification = async (item) => {
+    if (!item.isRead) {
+      try {
+        await fetch(`${import.meta.env.VITE_API_URL}/notifications/${item.id}/read`, { method: 'PATCH' });
+        // Cập nhật lại list ở màn hình (đổi màu xanh thành trắng)
+        setNotifications(prev => prev.map(n => n.id === item.id ? { ...n, isRead: true } : n));
+      } catch (error) {
+        console.error('Lỗi cập nhật thông báo:', error);
+      }
+    }
+    // Tùy chọn: Chuyển hướng đến vụ việc nếu có reportId
+    // if (item.reportId) window.location.href = `/bao-cao-ket-qua`; 
+  };
+
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
+  // Giao diện danh sách xổ xuống
+  const notificationContent = (
+    <div style={{ width: 320, maxHeight: 400, overflowY: 'auto', margin: '-12px -16px' }}>
+      <List
+        dataSource={notifications}
+        renderItem={(item) => (
+          <List.Item 
+            onClick={() => handleReadNotification(item)} // 👉 THÊM SỰ KIỆN CLICK VÀO ĐÂY
+            style={{ 
+              background: item.isRead ? '#fff' : '#e6f7ff', 
+              padding: '12px 16px', 
+              cursor: 'pointer', 
+              borderBottom: '1px solid #f0f0f0',
+              transition: 'background 0.3s'
+            }}>
+            <List.Item.Meta
+              title={<Typography.Text strong={!item.isRead} style={{ color: '#005bac', fontSize: '14px' }}>{item.title}</Typography.Text>}
+              description={
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <Typography.Text type="secondary" style={{ fontSize: '13px', marginBottom: '4px' }}>{item.content}</Typography.Text>
+                  <Typography.Text type="secondary" style={{ fontSize: '11px' }}>
+                    {new Date(item.createdAt).toLocaleString('vi-VN')}
+                  </Typography.Text>
+                </div>
+              }
+            />
+          </List.Item>
+        )}
+      />
+    </div>
+  );
+  
   const handleLogin = (userData) => { 
     setUserRole(userData.role);
     localStorage.setItem('userRole', userData.role);
@@ -173,26 +269,44 @@ function App() {
                 
                 <div className="main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                   <header className="top-header" style={{ 
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
-                    padding: isMobile ? '0 16px 0 56px' : '0 24px 0 60px', 
-                    height: '64px', background: '#fff', borderBottom: '1px solid #f0f0f0' 
-                  }}>
-                    <h1 style={{ margin: 0, fontSize: 'clamp(13px, 3.5vw, 18px)', fontWeight: '700', color: '#005bac', letterSpacing: '0.3px', fontFamily: "'Inter', sans-serif", lineHeight: '1.3', textAlign: 'left', whiteSpace: 'normal', wordWrap: 'break-word', flex: 1, paddingRight: '12px' }}>
-                      Hệ thống Tiếp nhận phản ánh & Tuyên truyền pháp luật
-                    </h1>
-                    
-                    <Dropdown menu={userMenu} placement="bottomRight" trigger={['click']}>
-                      <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '8px' }}>
-                        <Avatar size={isMobile ? "default" : "large"} src={userInfo?.avatar} icon={!userInfo?.avatar && <UserOutlined />} style={{ backgroundColor: '#005bac', border: '2px solid #e6f7ff', objectFit: 'cover' }} />
-                        <span style={{ fontWeight: 500, display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
-                          <span style={{ fontSize: isMobile ? '13px' : '14px', color: '#333' }}>
-                            {userInfo?.fullName || (userRole === 'admin' ? 'Admin' : 'Cán bộ')}
-                          </span>
-                          {!isMobile && <span style={{ fontSize: '12px', color: '#8c8c8c' }}>{userInfo?.email}</span>}
-                        </span>
-                      </div>
-                    </Dropdown>
-                  </header>
+  display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+  padding: isMobile ? '0 16px 0 56px' : '0 24px 0 60px', 
+  height: '64px', background: '#fff', borderBottom: '1px solid #f0f0f0' 
+}}>
+  <h1 style={{ margin: 0, fontSize: 'clamp(13px, 3.5vw, 18px)', fontWeight: '700', color: '#005bac', letterSpacing: '0.3px', fontFamily: "'Inter', sans-serif", lineHeight: '1.3', textAlign: 'left', whiteSpace: 'normal', wordWrap: 'break-word', flex: 1, paddingRight: '12px' }}>
+    Hệ thống Tiếp nhận phản ánh & Tuyên truyền pháp luật
+  </h1>
+  
+  {/* 👉 BỔ SUNG: Khối chứa Chuông và Avatar */}
+  <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '16px' : '24px' }}>
+    
+    {/* QUẢ CHUÔNG THÔNG BÁO */}
+    <Popover 
+      placement="bottomRight" 
+      title={<div style={{ padding: '8px 4px', borderBottom: '1px solid #f0f0f0' }}><b style={{ fontSize: '15px' }}>Thông báo mới</b></div>} 
+      content={notificationContent} 
+      trigger="click"
+    >
+      <Badge count={unreadCount} size="small" offset={[-2, 4]} style={{ cursor: 'pointer' }}>
+        <BellOutlined style={{ fontSize: '22px', color: '#595959', cursor: 'pointer', transition: 'color 0.3s' }} onMouseOver={(e) => e.target.style.color = '#005bac'} onMouseOut={(e) => e.target.style.color = '#595959'}/>
+      </Badge>
+    </Popover>
+
+    {/* AVATAR CŨ (GIỮ NGUYÊN) */}
+    <Dropdown menu={userMenu} placement="bottomRight" trigger={['click']}>
+      <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '8px' }}>
+        <Avatar size={isMobile ? "default" : "large"} src={userInfo?.avatar} icon={!userInfo?.avatar && <UserOutlined />} style={{ backgroundColor: '#005bac', border: '2px solid #e6f7ff', objectFit: 'cover' }} />
+        <span style={{ fontWeight: 500, display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
+          <span style={{ fontSize: isMobile ? '13px' : '14px', color: '#333' }}>
+            {userInfo?.fullName || (userRole === 'admin' ? 'Admin' : 'Cán bộ')}
+          </span>
+          {!isMobile && <span style={{ fontSize: '12px', color: '#8c8c8c' }}>{userInfo?.email}</span>}
+        </span>
+      </div>
+    </Dropdown>
+
+  </div>
+</header>
 
                   <div style={{ padding: 'clamp(10px, 2vw, 24px)', margin: 0, width: '100%', flex: 1, overflowY: 'auto', background: '#f0f2f5' }}>
                     <div className="content-area">

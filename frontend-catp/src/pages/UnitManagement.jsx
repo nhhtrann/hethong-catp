@@ -172,8 +172,9 @@ const UnitManagement = () => {
     { title: 'Tên đơn vị', dataIndex: 'tenDonVi', key: 'tenDonVi', width: 250, align: 'center' },
     {
     title: 'Phường/Xã',
-    dataIndex: 'phuongXa', // Nhận về object phuongXa từ Backend
+    dataIndex: 'phuongXa', 
     key: 'phuongXa',
+    align : 'center',
     render: (phuongXa) => phuongXa ? <b>{phuongXa.tenPhuongXa}</b> : <i style={{ color: '#ccc' }}>Chưa cập nhật</i>
     },
     { title: 'Người liên hệ', dataIndex: 'nguoiLienHe', key: 'nguoiLienHe', width: 200, align: 'center' },

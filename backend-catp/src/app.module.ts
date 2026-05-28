@@ -15,15 +15,17 @@ import { AppService } from './app.service';
 import { UploadController } from './upload.controller';
 import { Category } from './reports/entities/categories.entity';
 import { PhuongXa } from './units/entities/phuong-xa.entity';
+import { Notification } from './notifications/entities/notification.entity';
+
+import { MailerModule } from '@nestjs-modules/mailer';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
-    // 1. KÍCH HOẠT ĐỌC FILE .ENV
     ConfigModule.forRoot({
       isGlobal: true, 
     }),
     
-    // 2. DÙNG forRootAsync ĐỂ ÉP HỆ THỐNG ĐỢI ĐỌC XONG .ENV MỚI KẾT NỐI
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService], 
@@ -35,9 +37,9 @@ import { PhuongXa } from './units/entities/phuong-xa.entity';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME') || 'hethong-catp',
         
-        entities: [Report, Unit, News, User, Category, PhuongXa],
+        entities: [Report, Unit, News, User, Category, PhuongXa, Notification],
         
-        synchronize: true, // Tự động tạo bảng theo Entity (Chỉ dùng trong dev, không dùng trong production)
+        synchronize: true, 
         extra: {
           trustServerCertificate: false,
           encrypt: false,
@@ -51,12 +53,32 @@ import { PhuongXa } from './units/entities/phuong-xa.entity';
         },
       }),
     }),
-    TypeOrmModule.forFeature([User, Category, PhuongXa]),
+
+    MailerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        transport: {
+          host: 'smtp.gmail.com',
+          port: 465,
+          secure: true,
+          auth: {
+            user: configService.get<string>('EMAIL_USER'), 
+            pass: configService.get<string>('EMAIL_PASS'), 
+          },
+        },
+        defaults: {
+          from: '"Hệ thống An Ninh Học Đường" <no-reply@hethong.com>',
+        },
+      }),
+    }),
+
+    TypeOrmModule.forFeature([User, Category, PhuongXa, Notification]),
     ReportsModule,
     UnitsModule,
     NewsModule,
     UsersModule,
-    
+    NotificationsModule,
   ],
   controllers: [AppController, UploadController], 
   providers: [AppService],

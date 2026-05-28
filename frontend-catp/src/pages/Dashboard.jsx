@@ -5,7 +5,17 @@ import { AlertOutlined, CheckCircleOutlined, SyncOutlined, FileTextOutlined } fr
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 const { Title } = Typography;
+const originalConsoleError = console.error;
+const originalConsoleWarn = console.warn;
+console.error = (...args) => {
+  if (typeof args[0] === 'string' && args[0].includes('The width(-1) and height(-1)')) return;
+  originalConsoleError(...args);
+};
 
+console.warn = (...args) => {
+  if (typeof args[0] === 'string' && args[0].includes('The width(-1) and height(-1)')) return;
+  originalConsoleWarn(...args);
+};
 const Dashboard = () => {
   const [data, setData] = useState([]);
   const [news, setNews] = useState([]);
@@ -125,8 +135,8 @@ return <Tag color={color}>{trangThai?.toUpperCase()}</Tag>;
         </Col>
         <Col xs={24} lg={10}>
           <Card title="Tỷ lệ Trạng thái" bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)', height: '100%' }}>
-            <div style={{ height: 250 }}>
-              <ResponsiveContainer>
+             <div style={{ width: '100%', height: 300 }}> 
+              <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
                 <PieChart>
                   <Pie data={pieData} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
                     {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
@@ -134,7 +144,7 @@ return <Tag color={color}>{trangThai?.toUpperCase()}</Tag>;
                   <Tooltip />
                   <Legend />
                 </PieChart>
-</ResponsiveContainer>
+              </ResponsiveContainer>
             </div>
           </Card>
         </Col>
@@ -144,8 +154,8 @@ return <Tag color={color}>{trangThai?.toUpperCase()}</Tag>;
       <Row gutter={[24, 24]} style={{ marginTop: '24px' }}>
         <Col xs={24}>
           <Card title="Đánh giá xu hướng vi phạm (Theo nhóm)" bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-            <div style={{ height: 350 }}>
-              <ResponsiveContainer width="100%" height="100%">
+             <div style={{ width: '100%', height: 300 }}> 
+              <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
                 <BarChart data={categoryChartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="name" />

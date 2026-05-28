@@ -1,6 +1,7 @@
 // src/pages/ReportDispatch.jsx
 import React, { useState, useEffect } from 'react';
-import { Table, Tag, Card, Typography, Input, Space, Button, Select, Modal, Form, message, Upload, Row, Col } from 'antd'; 
+import { Table, Tag, Card, Typography, Input, Space, Button, Select, 
+  Modal, Form, message, Upload, Row, Col } from 'antd'; 
 import { 
   SearchOutlined, 
   EyeOutlined, 
@@ -9,7 +10,8 @@ import {
   DeleteOutlined, 
   ExclamationCircleOutlined 
 } from '@ant-design/icons';
-
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import ReportDetail from '../pages/ReportDetail';
 
 const { Title } = Typography;
@@ -74,6 +76,7 @@ const ReportDispatch = () => {
             ghiChu: item.ghiChuKetQua,
             anhKetQua: item.anhKetQua,
             anhKiemChung: item.anhKiemChung,
+            sdtNguoiGui: item.sdtNguoiGui || '',
             ngayGui: item.ngayGui ? new Date(item.ngayGui).toLocaleDateString('vi-VN') : '',
           }));
           
@@ -193,18 +196,71 @@ const ReportDispatch = () => {
     }
   };
 
-  const handleExport = () => {
-    const headers = ['STT', 'Tiêu đề', 'Mảng vi phạm', 'Ngày gửi', 'Đơn vị xử lý', 'Trạng thái'];
-    const rows = filteredData.map((item, index) => [
-      index + 1, `"${item.tieuDe}"`, `"${item.mang}"`, `"${item.ngayGui}"`, `"${item.donViXuLy}"`, `"${item.trangThai}"`
-    ]);
-    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + [headers.join(','), ...rows.map(e => e.join(','))].join("\n");
-    const link = document.createElement("a");
-    link.setAttribute("href", encodeURI(csvContent));
-    link.setAttribute("download", "DanhSachPhanAnh.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleExportExcel = async () => {
+    // 1. Tạo một file Excel mới
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Danh sách phản ánh');
+
+    // 2. Định nghĩa các cột (Độ rộng tự động cho đẹp)
+    worksheet.columns = [
+      { header: 'STT', key: 'stt', width: 5 },
+      { header: 'Mã Vụ Việc', key: 'id', width: 15 },
+      { header: 'Tiêu đề', key: 'tieuDe', width: 40 },
+      { header: 'Nội dung', key: 'noiDung', width: 50 },
+      { header: 'Người gửi', key: 'nguoiGui', width: 20 },
+      { header: 'SĐT', key: 'sdtNguoiGui', width: 15 },
+      { header: 'Trạng thái', key: 'trangThai', width: 15 },
+      { header: 'Đơn vị xử lý', key: 'donViXuLy', width: 30 },
+      { header: 'Ngày gửi', key: 'ngayGui', width: 20 },
+    ];
+
+    // 3. Style cho dòng Tiêu đề (In đậm, nền xanh dương nhạt, chữ canh giữa)
+    worksheet.getRow(1).eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF005bac' } // Màu xanh của Công an
+      };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+
+    // 4. Bơm dữ liệu vào bảng
+    data.forEach((report, index) => {
+      worksheet.addRow({
+        stt: index + 1,
+        id: `RP-${report.id}`,
+        tieuDe: report.tieuDe,
+        noiDung: report.noiDung,
+        mang: report.mang,
+        nguoiGui: report.nguoiGui?.hoTen || 'Ẩn danh', // Đề phòng không có người gửi
+        sdtNguoiGui: report.sdtNguoiGui || '',
+        trangThai: report.trangThai,
+        donViXuLy: report.donViXuLy || 'Chưa phân công',
+        ngayGui: report.ngayGui,
+      });
+    });
+
+    // 5. 👉 VẼ KHUNG (BORDER) CHO TOÀN BỘ CÁC Ô CÓ DỮ LIỆU
+    worksheet.eachRow((row) => {
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+        // Canh lề chữ để ô nhìn thoáng hơn
+        if (row.number !== 1) { // Trừ dòng tiêu đề đã canh lề ở trên
+            cell.alignment = { vertical: 'middle', wrapText: true };
+        }
+      });
+    });
+
+    // 6. Lưu và tải file xuống
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, 'Bao_Cao_An_Ninh_Hoc_Duong.xlsx');
   };
 
   const rowSelection = {
@@ -219,7 +275,6 @@ const ReportDispatch = () => {
     { title: 'STT', key: 'stt', width: 60, align: 'center', render: (text, record, index) => (currentPage - 1) * 8 + index + 1 },
     { title: 'Tiêu đề vụ việc', dataIndex: 'tieuDe', key: 'tieuDe', width: 250, ellipsis: true, align: 'center' },
     { title: 'Mảng vi phạm', dataIndex: 'mang', key: 'mang', width: 140, align: 'center' },
-    { title: 'Ngày gửi', dataIndex: 'ngayGui', key: 'ngayGui', width: 120, align: 'center' },
     { 
       title: 'Đơn vị xử lý', 
       dataIndex: 'donViXuLy', 
@@ -248,7 +303,9 @@ const ReportDispatch = () => {
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           {/* Nếu không có tên thì fallback về 'Người dân' hoặc 'Ẩn danh' */}
           <b>{text || 'Người dân'}</b>
-          
+          <span style={{ fontSize: '13px', color: '#555' }}>
+            {record.sdtNguoiGui ? `SĐT: ${record.sdtNguoiGui}` : 'SĐT: Không có'}
+          </span>
           {/* 👉 ĐÃ SỬA: Bắt buộc diemUyTin phải là SỐ thì mới in ra */}
           {typeof record.diemUyTin === 'number' && (
             <span style={{ 
@@ -261,6 +318,7 @@ const ReportDispatch = () => {
         </div>
       ),
     },
+
     {
       title: 'Hành động',
       key: 'action',
@@ -285,12 +343,10 @@ const ReportDispatch = () => {
         };
 
         return (
-          // 👉 GIỮ NGUYÊN 100% thẻ Space, cấu trúc Button và nút Xóa của bạn
           <Space size={0}>
             <Button 
               type="text" size="small"
               icon={<EyeOutlined style={{ color: '#1890ff', fontSize: '16px' }} />} 
-              // 👉 CHỈ SỬA CLICK Ở NÚT NÀY
               onClick={handleViewDetail} 
             />
             <Button 
@@ -313,7 +369,7 @@ const ReportDispatch = () => {
   return (
     <div style={{ 
       padding: 'clamp(10px, 2vw, 24px)', 
-      maxWidth: '1300px', // 👉 SỬA: Đổi 1300 thành 1400 để đồng bộ kích thước khung với Quản lý Đơn vị
+      maxWidth: '1400px', // 👉 SỬA: Đổi 1300 thành 1400 để đồng bộ kích thước khung với Quản lý Đơn vị
       margin: '0 auto',   
       overflowX: 'hidden' 
     }}>
@@ -394,7 +450,6 @@ const ReportDispatch = () => {
               <Option value="Đang xử lý">Đang xử lý</Option>
               <Option value="Chờ duyệt">Chờ duyệt</Option>
               <Option value="Hoàn thành">Hoàn thành</Option>
-              <Option value="Trễ hạn">Trễ hạn</Option>
             </Select>
 
             <Select 
@@ -424,12 +479,11 @@ const ReportDispatch = () => {
           </Space>
 
           <Button 
-            type="default" 
-            icon={<DownloadOutlined />} 
-            onClick={handleExport} 
-            style={{ borderColor: '#10b981', color: '#10b981', width: isMobile ? '100%' : 'auto' }}
+            type="primary" 
+            onClick={handleExportExcel} 
+            style={{ marginBottom: '16px', background: '#10b981' }} 
           >
-            Xuất dữ liệu
+            Xuất Excel
           </Button>
         </div>
 

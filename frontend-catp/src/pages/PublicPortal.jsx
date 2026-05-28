@@ -41,6 +41,13 @@ const PublicPortal = () => {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [searchParams] = useSearchParams();
   const urlSchoolId = searchParams.get('schoolId');
+  const [hotlines, setHotlines] = useState([]); 
+  const [searchHotline, setSearchHotline] = useState('');
+
+  const filteredHotlines = hotlines.filter(item => 
+    item.tenDonVi?.toLowerCase().includes(searchHotline.toLowerCase()) || 
+    item.soDienThoai?.includes(searchHotline)
+  );
 
   useEffect(() => {
     fetchData();
@@ -70,7 +77,10 @@ const PublicPortal = () => {
       ]);
 
       setCategories(catData);
-      setSchools(unitData.filter(u => u.tenDonVi.includes('Đại học') || u.tenDonVi.includes('THPT')));
+      setSchools(unitData.filter(u => u.tenDonVi.includes('Đại học') || u.tenDonVi.includes('THPT')
+        || u.tenDonVi.includes('Trường'))); 
+      setHotlines(unitData.filter(u => !u.tenDonVi.includes('Đại học') && !u.tenDonVi.includes('THPT')
+        && !u.tenDonVi.includes('Trường')));
 
       let combinedFeed = [];
 
@@ -351,140 +361,185 @@ const PublicPortal = () => {
       </Header>
 
       {/* NỘI DUNG TIN TỨC GIỮ NGUYÊN NHƯ CŨ */}
-      <Content style={{ padding: '30px 5%', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+      <Content style={{ padding: '30px 5%', maxWidth: '1300px', margin: '0 auto', width: '100%' }}>
+        
+        {/* ================= BANNER FULL WIDTH ================= */}
         <div style={{ marginBottom: '30px', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
           <Carousel autoplay effect="fade">
-            <div>
-              <img 
-                src={imgBanner1} 
-                alt="Banner 1" 
-                style={{ 
-                  width: '100%', 
-                  height: window.innerWidth > 768 ? '350px' : '180px', 
-                  objectFit: 'cover', // Đảm bảo ảnh lấp đầy khung mà không bị méo
-                  display: 'block' 
-                }} 
-              />
-            </div>
-            <div>
-              <img 
-                src={imgBanner2} 
-                alt="Banner 2" 
-                style={{ 
-                  width: '100%', 
-                  height: window.innerWidth > 768 ? '350px' : '180px', 
-                  objectFit: 'cover', 
-                  display: 'block' 
-                }} 
-              />
-            </div>
-            <div>
-              <img 
-                src={imgBanner3} 
-                alt="Banner 3" 
-                style={{ 
-                  width: '100%', 
-                  height: window.innerWidth > 768 ? '350px' : '180px', 
-                  objectFit: 'cover', 
-                  display: 'block' 
-                }} 
-              />
-            </div>
+            <div><img src={imgBanner1} alt="Banner 1" style={{ width: '100%', height: window.innerWidth > 768 ? '350px' : '180px', objectFit: 'cover', display: 'block' }} /></div>
+            <div><img src={imgBanner2} alt="Banner 2" style={{ width: '100%', height: window.innerWidth > 768 ? '350px' : '180px', objectFit: 'cover', display: 'block' }} /></div>
+            <div><img src={imgBanner3} alt="Banner 3" style={{ width: '100%', height: window.innerWidth > 768 ? '350px' : '180px', objectFit: 'cover', display: 'block' }} /></div>
           </Carousel>
         </div>
 
-        <div style={{ 
-          display: 'flex', overflowX: 'auto', whiteSpace: 'nowrap', 
-          paddingBottom: '16px', marginBottom: '24px', borderBottom: '2px solid #f0f0f0',
-          WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none'
-        }}>
-          {filterTags.map(tag => (
-            <span
-              key={tag}
-              onClick={() => setActiveFilter(tag)}
-              style={{ 
-                fontSize: '15px', fontWeight: activeFilter === tag ? 'bold' : '500', 
-                color: activeFilter === tag ? '#e11d48' : '#555',
-                marginRight: '24px', cursor: 'pointer', position: 'relative',
-                paddingBottom: '12px'
-              }}
-            >
-              {tag}
-              {activeFilter === tag && (
-                <div style={{ position: 'absolute', bottom: '-2px', left: 0, right: 0, height: '2px', background: '#e11d48' }} />
-              )}
-            </span>
-          ))}
-        </div>
+        {/* ================= CHIA 2 CỘT ================= */}
+        <Row gutter={[32, 32]}>
+          
+          {/* CỘT TRÁI: TIN TỨC & BÁO CÁO (Chiếm 16/24 grid) */}
+          <Col xs={24} lg={16}>
+            
+            {/* Thanh Filter (Menu ngang) */}
+            <div style={{ 
+              display: 'flex', overflowX: 'auto', whiteSpace: 'nowrap', 
+              paddingBottom: '16px', marginBottom: '24px', borderBottom: '2px solid #f0f0f0',
+              WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none'
+            }}>
+              {filterTags.map(tag => (
+                <span
+                  key={tag} onClick={() => setActiveFilter(tag)}
+                  style={{ 
+                    fontSize: '15px', fontWeight: activeFilter === tag ? 'bold' : '500', 
+                    color: activeFilter === tag ? '#e11d48' : '#555',
+                    marginRight: '24px', cursor: 'pointer', position: 'relative', paddingBottom: '12px'
+                  }}
+                >
+                  {tag}
+                  {activeFilter === tag && <div style={{ position: 'absolute', bottom: '-2px', left: 0, right: 0, height: '2px', background: '#e11d48' }} />}
+                </span>
+              ))}
+            </div>
 
-        {loadingFeed ? (
-          <div style={{ textAlign: 'center', padding: '100px' }}><Spin size="large" /></div>
-        ) : filteredFeed.length === 0 ? (
-          <Empty description="Chưa có bản tin nào trong chuyên mục này" style={{ padding: '50px' }} />
-        ) : (
-          <>
-            {featuredArticle && (
-              <Row gutter={[32, 32]} style={{ marginBottom: '40px' }}>
-                <Col xs={24} md={16}>
-                  <div style={{ overflow: 'hidden', borderRadius: '8px', cursor: 'pointer' }}>
-                    <img 
-                      src={featuredArticle.image} 
-                      alt={featuredArticle.title} 
-                      style={{ width: '100%', height: window.innerWidth > 768 ? '400px' : '250px', objectFit: 'cover', transition: 'transform 0.5s' }}
-                      onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05)'}
-                      onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
-                    />
-                  </div>
-                </Col>
-                <Col xs={24} md={8} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                  <Tag color={featuredArticle.type === 'Tin tức' ? 'blue' : 'green'} style={{ alignSelf: 'flex-start', marginBottom: '12px' }}>
-                    {featuredArticle.categoryName}
-                  </Tag>
-                  <Title level={2} style={{ marginTop: 0, fontFamily: 'serif', lineHeight: 1.3, color: '#111' }}>
-                    {featuredArticle.title}
-                  </Title>
-                  <Paragraph style={{ fontSize: '16px', color: '#555', lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    {featuredArticle.content}
-                  </Paragraph>
-                  <Text type="secondary" style={{ marginTop: 'auto' }}><ClockCircleOutlined /> {featuredArticle.date.toLocaleDateString('vi-VN')}</Text>
-                </Col>
-              </Row>
-            )}
-
-            <Row gutter={[24, 40]}>
-              {regularArticles.map(item => (
-                <Col xs={24} sm={12} md={8} key={item.id}>
-                  <div style={{ cursor: 'pointer', group: 'true' }}>
-                    <div style={{ overflow: 'hidden', borderRadius: '6px', marginBottom: '12px', position: 'relative' }}>
+            {/* Render Danh sách tin tức */}
+            {loadingFeed ? (
+              <div style={{ textAlign: 'center', padding: '100px' }}><Spin size="large" /></div>
+            ) : filteredFeed.length === 0 ? (
+              <Empty description="Chưa có bản tin nào trong chuyên mục này" style={{ padding: '50px' }} />
+            ) : (
+              <>
+                {/* Tin nổi bật (To nhất) */}
+                {featuredArticle && (
+                  <div style={{ marginBottom: '40px' }}>
+                    <div style={{ overflow: 'hidden', borderRadius: '8px', cursor: 'pointer', marginBottom: '16px' }}>
                       <img 
-                        src={item.image} 
-                        alt={item.title} 
-                        style={{ width: '100%', height: '200px', objectFit: 'cover', transition: 'transform 0.5s' }}
-                        onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                        src={featuredArticle.image} alt={featuredArticle.title} 
+                        style={{ width: '100%', height: window.innerWidth > 768 ? '350px' : '250px', objectFit: 'cover', transition: 'transform 0.5s' }}
+                        onMouseOver={e => e.currentTarget.style.transform = 'scale(1.03)'}
                         onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
                       />
-                      {item.type === 'Phản ánh' && (
-                        <div style={{ position: 'absolute', top: '8px', left: '8px', background: 'rgba(82, 196, 26, 0.9)', color: '#fff', padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>
-                          ĐÃ XỬ LÝ
-                        </div>
-                      )}
                     </div>
-                    <Title level={4} style={{ margin: '0 0 8px 0', fontFamily: 'serif', lineHeight: 1.4, color: '#222' }}>
-                      {item.title}
+                    <Tag color={featuredArticle.type === 'Tin tức' ? 'blue' : 'green'} style={{ marginBottom: '12px' }}>
+                      {featuredArticle.categoryName}
+                    </Tag>
+                    <Title level={2} style={{ marginTop: 0, fontFamily: 'serif', lineHeight: 1.3, color: '#111' }}>
+                      {featuredArticle.title}
                     </Title>
-                    <Paragraph style={{ color: '#666', fontSize: '14px', margin: '0 0 8px 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                      {item.content}
+                    <Paragraph style={{ fontSize: '16px', color: '#555', lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {featuredArticle.content}
                     </Paragraph>
-                    <div style={{ fontSize: '12px', color: '#999', display: 'flex', justifyContent: 'space-between' }}>
-                      <span><FireFilled style={{ color: '#bfbfbf' }} /> {item.categoryName}</span>
-                      <span>{item.date.toLocaleDateString('vi-VN')}</span>
-                    </div>
+                    <Text type="secondary"><ClockCircleOutlined /> {featuredArticle.date.toLocaleDateString('vi-VN')}</Text>
                   </div>
-                </Col>
-              ))}
-            </Row>
-          </>
-        )}
+                )}
+
+                {/* Các tin nhỏ (Chia 2 cột vì không gian thu hẹp lại) */}
+                <Row gutter={[24, 40]}>
+                  {regularArticles.map(item => (
+                    // 👉 SỬA CHỖ NÀY: Thay md={8} thành md={12} để lưới tin nhỏ vừa vặn với 1 nửa cột
+                    <Col xs={24} sm={12} key={item.id}> 
+                      <div style={{ cursor: 'pointer' }}>
+                        <div style={{ overflow: 'hidden', borderRadius: '6px', marginBottom: '12px', position: 'relative' }}>
+                          <img 
+                            src={item.image} alt={item.title} 
+                            style={{ width: '100%', height: '180px', objectFit: 'cover', transition: 'transform 0.5s' }}
+                            onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                            onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+                          />
+                          {item.type === 'Phản ánh' && (
+                            <div style={{ position: 'absolute', top: '8px', left: '8px', background: 'rgba(82, 196, 26, 0.9)', color: '#fff', padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>
+                              ĐÃ XỬ LÝ
+                            </div>
+                          )}
+                        </div>
+                        <Title level={4} style={{ margin: '0 0 8px 0', fontFamily: 'serif', lineHeight: 1.4, color: '#222' }}>{item.title}</Title>
+                        <Paragraph style={{ color: '#666', fontSize: '14px', margin: '0 0 8px 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                          {item.content}
+                        </Paragraph>
+                        <div style={{ fontSize: '12px', color: '#999', display: 'flex', justifyContent: 'space-between' }}>
+                          <span><FireFilled style={{ color: '#bfbfbf' }} /> {item.categoryName}</span>
+                          <span>{item.date.toLocaleDateString('vi-VN')}</span>
+                        </div>
+                      </div>
+                    </Col>
+                  ))}
+                </Row>
+              </>
+            )}
+          </Col>
+
+          {/* CỘT PHẢI: DANH BẠ ĐIỆN THOẠI (Chiếm 8/24 grid, luôn nằm bên phải trên PC) */}
+          <Col xs={24} lg={8}>
+            <div style={{ 
+              position: 'sticky', // 👉 Giữ thẻ này đứng im khi cuộn chuột đọc tin tức
+              top: '90px', 
+              background: '#fff', 
+              borderRadius: '8px', 
+              border: '1px solid #e8e8e8',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+              overflow: 'hidden'
+            }}>
+              
+              {/* Tiêu đề danh bạ */}
+              <div style={{ background: '#0a3055', padding: '16px', textAlign: 'center' }}>
+                <Title level={4} style={{ margin: 0, color: '#fff', fontSize: '16px' }}>
+                  <PhoneOutlined /> DANH BẠ CÔNG AN CẤP XÃ
+                </Title>
+              </div>
+
+              {/* Ô tìm kiếm */}
+              <div style={{ padding: '12px' }}>
+                <Input 
+                  placeholder="Nhập tên phường/xã để tìm..." 
+                  prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />} 
+                  value={searchHotline}
+                  onChange={(e) => setSearchHotline(e.target.value)}
+                  allowClear
+                />
+              </div>
+
+              {/* Danh sách cuộn */}
+              <div style={{ 
+                maxHeight: '500px', 
+                overflowY: 'auto', 
+                padding: '0 12px 12px 12px' 
+              }}>
+                {filteredHotlines.length > 0 ? (
+                  filteredHotlines.map((item, index) => (
+                    <div 
+                      key={item.id} 
+                      style={{ 
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+                        padding: '12px 8px', 
+                        borderBottom: index !== filteredHotlines.length - 1 ? '1px dashed #f0f0f0' : 'none',
+                        transition: 'background 0.3s'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', maxWidth: '65%' }}>
+                        <div style={{ width: '24px', height: '24px', background: '#f0f2f5', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#888', fontWeight: 'bold', flexShrink: 0 }}>
+                          {index + 1}
+                        </div>
+                        <span style={{ fontWeight: '600', color: '#333', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {item.tenDonVi}
+                        </span>
+                      </div>
+                      <a 
+                        href={`tel:${item.soDienThoai ? item.soDienThoai.replace(/\s/g, '') : ''}`} 
+                        style={{ color: '#10b981', fontWeight: 'bold', fontSize: '14px', flexShrink: 0 }}
+                      >
+                        {item.soDienThoai || 'Chưa có số'}
+                      </a>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
+                    Không tìm thấy kết quả
+                  </div>
+                )}
+              </div>
+            </div>
+          </Col>
+          
+        </Row>
       </Content>
 
       <Footer style={{ textAlign: 'center', background: '#f0f2f5', color: '#888', padding: '30px 50px', borderTop: '1px solid #e8e8e8' }}>

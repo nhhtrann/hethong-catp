@@ -3,9 +3,20 @@ import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Statistic, DatePicker, Space, Button, Table, Typography, message, Tag } from 'antd';
 import { DownloadOutlined, FilterOutlined } from '@ant-design/icons';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 const { Title } = Typography;
+const originalConsoleError = console.error;
+const originalConsoleWarn = console.warn;
+console.error = (...args) => {
+  if (typeof args[0] === 'string' && args[0].includes('The width(-1) and height(-1)')) return;
+  originalConsoleError(...args);
+};
 
+console.warn = (...args) => {
+  if (typeof args[0] === 'string' && args[0].includes('The width(-1) and height(-1)')) return;
+  originalConsoleWarn(...args);
+};
 const StatisticalReport = () => {
   const [data, setData] = useState([]); 
   const [filteredData, setFilteredData] = useState([]); 
@@ -26,16 +37,22 @@ const StatisticalReport = () => {
     fetch(`${import.meta.env.VITE_API_URL}/reports`)
       .then(res => res.json())
       .then(result => {
-        if (Array.isArray(result)) {
-          const formattedData = result.map((item, index) => ({
-            key: item.id?.toString() || index.toString(),
-            stt: index + 1,
-            tieuDe: item.tieuDe,
-            mang: item.mangViPham,
-            ngayGui: item.ngayGui ? new Date(item.ngayGui).toLocaleDateString('vi-VN') : '',
-            ngayGuiGoc: item.ngayGui ? new Date(item.ngayGui) : null, 
-            trangThai: item.trangThai,
-          }));
+        if (Array.isArray(result) && result.length > 0) {
+
+          const formattedData = result.map((item, index) => {
+            
+            // Lấy thời gian an toàn
+            const rawDate = item.ngayGui || item.createdAt || item.ngayTao;
+
+            return {
+              key: item.id?.toString() || index.toString(),
+              stt: index + 1,
+              tieuDe: item.tieuDe,
+              mang: item.category ? item.category.tenDanhMuc : 'Chưa phân loại',
+              ngayGui: item.ngayGui,
+              trangThai: item.trangThai,
+            };
+          });
           setData(formattedData);
           setFilteredData(formattedData); 
         }
@@ -43,7 +60,6 @@ const StatisticalReport = () => {
       .catch(err => console.error("Lỗi lấy dữ liệu:", err));
   }, []);
 
-  // 👉 ĐÃ SỬA: Logic lọc hỗ trợ 2 ô lịch đơn lẻ
   const handleFilter = () => {
     if (!startDate && !endDate) {
       setFilteredData(data); 
@@ -89,7 +105,7 @@ const processingReports = filteredData.filter(item => item.trangThai === 'Đang 
     return acc;
   }, {});
   const pieData = Object.keys(mangStats).map(key => ({ name: key, value: mangStats[key] }));
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#64748b', '#d946ef'];
 
   const trangThaiStats = filteredData.reduce((acc, curr) => {
     acc[curr.trangThai] = (acc[curr.trangThai] || 0) + 1;
@@ -113,14 +129,74 @@ const processingReports = filteredData.filter(item => item.trangThai === 'Đang 
     { title: 'Ngày gửi', dataIndex: 'ngayGui', align: 'center' },
   ];
 
-  const handleExport = () => {
-    const headers = ['STT', 'Tiêu đề', 'Mảng vi phạm', 'Trạng thái', 'Ngày gửi'];
-    const rows = filteredData.map(item => [item.stt, `"${item.tieuDe}"`, `"${item.mang}"`, `"${item.trangThai}"`, `"${item.ngayGui}"`]);
-    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + [headers.join(','), ...rows.map(e => e.join(','))].join("\n");
-    const link = document.createElement("a");
-    link.href = encodeURI(csvContent);
-    link.download = "StatisticalReport_FilteredByDate.csv";
-    link.click();
+  const handleExport = async () => {
+    // 1. Tạo file Excel và Worksheet
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Thống kê vi phạm');
+
+    // 2. Định nghĩa các cột với độ rộng tùy chỉnh
+    worksheet.columns = [
+      { header: 'STT', key: 'stt', width: 8 },
+      { header: 'Tiêu đề phản ánh', key: 'tieuDe', width: 45 },
+      { header: 'Mảng vi phạm', key: 'mang', width: 25 },
+      { header: 'Trạng thái', key: 'trangThai', width: 20 },
+      { header: 'Ngày gửi', key: 'ngayGui', width: 20 },
+    ];
+
+    // 3. Trang trí dòng Tiêu đề (Row 1)
+    worksheet.getRow(1).eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } }; // Chữ trắng in đậm
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF005bac' }, // Nền xanh dương giống Công an
+      };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+
+    // 4. Bơm dữ liệu từ state filteredData vào Excel
+    filteredData.forEach((item) => {
+      worksheet.addRow({
+        stt: item.stt,
+        tieuDe: item.tieuDe,
+        mang: item.mang|| 'Chưa phân loại',
+        trangThai: item.trangThai?.toUpperCase(),
+        ngayGui: item.ngayGui,
+      });
+    });
+
+    // 5. VẼ KHUNG (BORDER) cho toàn bộ bảng và canh lề dữ liệu
+    worksheet.eachRow((row, rowNumber) => {
+      row.eachCell((cell) => {
+        // Kẻ viền đen nét mảnh cho 4 cạnh
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' },
+        };
+        
+        // Canh giữa cho các cột (Trừ cột Tiêu đề ở vị trí số 2 thì canh trái cho dễ đọc)
+        if (rowNumber !== 1) { 
+          cell.alignment = { 
+            vertical: 'middle', 
+            horizontal: cell.col === 2 ? 'left' : 'center',
+            wrapText: true // Tự động xuống dòng nếu chữ dài
+          };
+        }
+      });
+    });
+
+    // 6. Xử lý lưu file tải về máy tính
+    try {
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      saveAs(blob, `ThongKe_AnNinhHocDuong_${new Date().getTime()}.xlsx`);
+      message.success('Xuất file Excel thành công!');
+    } catch (error) {
+      console.error('Lỗi khi xuất Excel:', error);
+      message.error('Có lỗi xảy ra khi xuất file.');
+    }
   };
 
   return (
@@ -188,37 +264,78 @@ placeholder="Đến ngày"
       <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         <Col xs={24} lg={12}>
           <Card title="Tỷ lệ phản ánh theo Mảng vi phạm" bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)', height: '100%' }}>
-            <div style={{ width: '100%', height: 300 }}>
-              <ResponsiveContainer>
-                <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" outerRadius={100} dataKey="value" label>
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+            
+            <div style={{ width: '100%', height: 300 }}> 
+              {/* 👉 NẾU CÓ DỮ LIỆU THÌ MỚI VẼ BIỂU ĐỒ */}
+              {pieData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie 
+                      data={pieData} 
+                      cx="50%" cy="50%" outerRadius={110} 
+                      dataKey="value" stroke="none" 
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [`${value} vụ việc`, 'Số lượng']} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                /* 👉 CHƯA CÓ DỮ LIỆU THÌ HIỆN CHỮ ĐANG TẢI */
+                <div style={{ display: 'flex', height: '100%', justifyContent: 'center', alignItems: 'center', color: '#9ca3af' }}>
+                  Đang tải dữ liệu...
+                </div>
+              )}
             </div>
+
+            {/* Bảng chú thích (Chỉ hiện khi có dữ liệu) */}
+            {pieData.length > 0 && (
+              <div style={{ 
+                display: 'flex', flexWrap: 'wrap', justifyContent: 'center', 
+                gap: '12px 16px', marginTop: '16px', paddingTop: '16px', borderTop: '1px dashed #f0f0f0' 
+              }}>
+                {pieData.map((entry, index) => (
+                  <div key={`legend-${index}`} style={{ display: 'flex', alignItems: 'center', fontSize: '13px', color: '#4b5563' }}>
+                    <span style={{ 
+                      display: 'inline-block', width: '12px', height: '12px', 
+                      backgroundColor: COLORS[index % COLORS.length], marginRight: '6px', borderRadius: '50%' 
+                    }}></span>
+                    {entry.name} <strong style={{ marginLeft: '4px', color: '#111827' }}>({entry.value})</strong>
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
         </Col>
 
         <Col xs={24} lg={12}>
           <Card title="Thống kê theo Trạng thái xử lý" bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)', height: '100%' }}>
-            <div style={{ width: '100%', height: 300 }}>
-              <ResponsiveContainer>
-<BarChart data={barData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="soLuong" name="Số lượng" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+            
+            <div style={{ width: '100%', height: 300 }}> 
+              {/* 👉 NẾU CÓ DỮ LIỆU THÌ MỚI VẼ BIỂU ĐỒ */}
+              {barData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={barData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="soLuong" name="Số lượng" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                /* 👉 CHƯA CÓ DỮ LIỆU THÌ HIỆN CHỮ ĐANG TẢI */
+                <div style={{ display: 'flex', height: '100%', justifyContent: 'center', alignItems: 'center', color: '#9ca3af' }}>
+                  Đang tải dữ liệu...
+                </div>
+              )}
             </div>
+
           </Card>
         </Col>
+
       </Row>
 
       <Card title="Danh sách dữ liệu chi tiết" bordered={false} style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
