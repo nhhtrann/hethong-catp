@@ -1,4 +1,4 @@
-<img width="1235" height="856" alt="image" src="https://github.com/user-attachments/assets/cb1b815a-37c4-4e5b-a314-9e1406a1a830" /># 🛡️ Hue Connect - An Ninh Học Đường (CATP Hue Real-time Reporting System)
+# 🛡️ Hue Connect - An Ninh Học Đường (CATP Hue Real-time Reporting System)
 
 > Hệ thống Tiếp nhận Phản ánh và Tuyên truyền Pháp luật.
 > Đồ án Thực tập Tốt nghiệp - Khoa Công nghệ Thông tin, Đại học Khoa học - Đại học Huế (2026).
@@ -18,6 +18,7 @@ Hệ thống được thiết kế dựa trên kiến trúc phân lớp, tối �
 * **Danh bạ điện thoại:** Hỗ trợ bộ lọc động để người dân dễ dàng tra cứu và gọi trực tiếp đến trực ban Công an Phường/Xã.
 
 Giao diện HueConnect:
+
 <img width="1235" height="805" alt="image" src="https://github.com/user-attachments/assets/58ee348f-2f5d-48fc-8be8-8f051eb5d4fe" />
 <img width="1235" height="855" alt="image" src="https://github.com/user-attachments/assets/7a13f545-82dc-4cb2-bcd4-d3b97a0a1717" />
 <img width="1235" height="856" alt="image" src="https://github.com/user-attachments/assets/41f42b78-b4ae-4895-acc6-f70e32992138" />
@@ -29,10 +30,23 @@ Giao diện HueConnect:
 * **Phân công tự động (Dispatch):** Chuyển hồ sơ xuống đơn vị thụ lý (Phường/Trường học) chỉ bằng 1 thao tác.
 * **Xuất báo cáo chuyên nghiệp:** Trích xuất dữ liệu ra file Excel có định dạng màu sắc, kẻ khung (sử dụng thư viện ExcelJS).
 
+Giao diện chính Admin:
+
+<img width="1240" height="858" alt="image" src="https://github.com/user-attachments/assets/e61b2355-cd1c-4c2e-8212-238e2bc8f0ed" />
+<img width="1509" height="855" alt="image" src="https://github.com/user-attachments/assets/29e64855-7c95-4dc6-9093-c533f132e1b9" />
+<img width="836" height="823" alt="image" src="https://github.com/user-attachments/assets/8181f7d2-4bc9-4026-8c5f-6b83eeab2b0d" />
+<img width="1509" height="849" alt="image" src="https://github.com/user-attachments/assets/fb4a910e-00e4-4c42-86b6-cea860f87365" />
+<img width="1501" height="851" alt="image" src="https://github.com/user-attachments/assets/39a9d5ae-775b-48b1-b5c6-028ba89c197b" />
+<img width="1507" height="857" alt="image" src="https://github.com/user-attachments/assets/231814cb-2888-4af5-a00c-0306b751193f" />
+
 ### 3. Dành cho Đơn Vị Thụ Lý (Unit Dashboard - Phường/Trường)
 * **Tiếp nhận nhiệm vụ:** Cập nhật kết quả xử lý, đính kèm biên bản/hình ảnh hoàn thành.
 * **Cảnh báo tiến độ:** Thanh Progress Bar thay đổi màu sắc dựa trên số giờ còn lại.
 * **Chốt hồ sơ:** Chuyển trạng thái "Chờ duyệt" để trình lên Ban Quản trị.
+
+Giao diện cán bộ quản lý:
+
+<img width="1508" height="855" alt="image" src="https://github.com/user-attachments/assets/5ce0ac92-3259-4894-8f1b-02a7a233d31f" />
 
 ## 🛠️ Công nghệ Ứng dụng (Tech Stack)
 
@@ -52,7 +66,7 @@ Giao diện HueConnect:
 * Git
 
 ### Cài đặt Database
-1. Tạo một cơ sở dữ liệu mới trong SQL Server với tên `catp_hue`.
+1. Tạo một cơ sở dữ liệu mới trong SQL Server với tên `hethong-catp`.
 2. Hệ thống sử dụng cơ chế `synchronize: true` của TypeORM, các bảng sẽ tự động được tạo khi chạy Backend.
 
 🧑‍💻 Đội ngũ phát triển (Team Members)
